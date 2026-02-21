@@ -225,6 +225,15 @@ def configure_styles(style: ttkb.Style):
     style.configure("TSpinbox", padding=(6, 4))
     style.configure("TEntry", padding=(6, 4))
 
+    # Flash styles for required-field validation
+    input_bg = style.lookup("TEntry", "fieldbackground") or "#4a4a4a"
+    style._input_bg = input_bg  # used by flash_widgets() to restore
+    _configure(style, "Flash.TEntry", fieldbackground=Colors.INACTIVE, padding=(6, 4))
+    _map(style, "Flash.TEntry", fieldbackground=[
+        ("readonly", Colors.INACTIVE), ("disabled", Colors.INACTIVE),
+    ])
+    _configure(style, "Flash.TSpinbox", fieldbackground=Colors.INACTIVE, padding=(6, 4))
+
     # Header row style
     style.configure("Header.TLabel", font=FONT_SMALL)
 
@@ -233,6 +242,63 @@ def configure_styles(style: ttkb.Style):
 
     # Small checkbutton style
     style.configure("small.TCheckbutton", font=FONT_SMALL)
+
+
+# ── Flash validation utility ─────────────────────────────────
+
+
+def flash_widgets(
+    host: tk.Misc,
+    widgets: list[tk.Widget],
+    pulses: int = 3,
+    interval_ms: int = 150,
+) -> None:
+    """Flash widget backgrounds red to indicate empty required fields.
+
+    Handles ttk.Entry (style swap), ttk.Spinbox (style swap), and
+    tk.Frame / tk.Label (direct background config).
+    """
+    targets: list[tuple[tk.Widget, str, str]] = []  # (widget, set_cmd, restore_cmd)
+
+    for w in widgets:
+        if not w.winfo_viewable():
+            continue
+        if isinstance(w, ttk.Spinbox):
+            orig_style = str(w.cget("style")) or "TSpinbox"
+            targets.append((w, "Flash.TSpinbox", orig_style))
+        elif isinstance(w, ttk.Entry):
+            orig_style = str(w.cget("style")) or "TEntry"
+            targets.append((w, "Flash.TEntry", orig_style))
+        else:
+            # tk.Frame, tk.Label, etc. — direct background
+            try:
+                orig_bg = w.cget("background")
+            except tk.TclError:
+                continue
+            targets.append((w, Colors.INACTIVE, orig_bg))
+
+    if not targets:
+        return
+
+    def _apply(flash_on: bool):
+        for widget, flash_val, restore_val in targets:
+            if isinstance(widget, (ttk.Entry, ttk.Spinbox)):
+                widget.configure(style=flash_val if flash_on else restore_val)
+            else:
+                widget.configure(background=flash_val if flash_on else restore_val)
+
+    def _pulse(remaining: int):
+        if remaining <= 0:
+            _apply(False)  # ensure restored
+            return
+        _apply(True)
+        host.after(interval_ms, lambda: _off(remaining))
+
+    def _off(remaining: int):
+        _apply(False)
+        host.after(interval_ms, lambda: _pulse(remaining - 1))
+
+    _pulse(pulses)
 
 
 # ── Icon loading ─────────────────────────────────────────────

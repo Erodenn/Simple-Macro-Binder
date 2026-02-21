@@ -6,7 +6,6 @@ import time as _time
 import tkinter as tk
 from tkinter import ttk
 
-from ttkbootstrap.dialogs import Messagebox
 from typing import Callable
 
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
@@ -17,7 +16,7 @@ from actions import (
     hides_interval,
 )
 from models import Binding, Macro, MacroStep, Profile
-from theme import ToolTip, apply_dark_title_bar
+from theme import ToolTip, apply_dark_title_bar, flash_widgets, get_frame_bg
 
 
 def _center_on_parent(window, parent) -> None:
@@ -165,9 +164,9 @@ class StepEditorDialog(tk.Toplevel):
         self._key_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=6)
         ttk.Label(self._key_frame, text="Key:").pack(side="left")
         self._key_var = tk.StringVar(value=step.key if step and step.key else "")
-        ttk.Entry(self._key_frame, textvariable=self._key_var, width=15).pack(
-            side="left", padx=(6, 0),
-        )
+        self._key_entry = ttk.Entry(self._key_frame, textvariable=self._key_var, width=15)
+        self._key_entry.pack(side="left", padx=(6, 0))
+        self._key_var.trace_add("write", self._validate)
 
         # Mouse fields (for mouse_click)
         self._mouse_frame = ttk.Frame(main)
@@ -206,26 +205,37 @@ class StepEditorDialog(tk.Toplevel):
         # OK / Cancel
         btn_frame = ttk.Frame(main)
         btn_frame.grid(row=4, column=0, columnspan=2, pady=(14, 0))
-        ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        ok_btn.pack(side="left", padx=5)
-        ToolTip(ok_btn, text="Save step")
+        self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
+        self._ok_btn.pack(side="left", padx=5)
+        ToolTip(self._ok_btn, text="Save step")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
         cancel_btn.pack(side="left", padx=5)
         ToolTip(cancel_btn, text="Discard changes")
 
         self._on_type_changed()
+        self._validate()
 
     def _on_type_changed(self, *_args):
         st = self._type_var.get()
         self._key_frame.grid() if st in ("key_press", "key_release") else self._key_frame.grid_remove()
         self._mouse_frame.grid() if st == "mouse_click" else self._mouse_frame.grid_remove()
         self._delay_frame.grid() if st == "delay" else self._delay_frame.grid_remove()
+        self._validate()
+
+    def _validate(self, *_args):
+        st = self._type_var.get()
+        if st in ("key_press", "key_release"):
+            valid = bool(self._key_var.get().strip())
+        else:
+            valid = True
+        self._ok_btn.configure(style="success.Round.TButton" if valid else "secondary.Round.TButton")
 
     def _ok(self):
         st = self._type_var.get()
         if st in ("key_press", "key_release"):
             key = self._key_var.get().strip()
             if not key:
+                flash_widgets(self, [self._key_entry])
                 return
             self.result = MacroStep(step_type=st, key=key)
         elif st == "mouse_click":
@@ -282,9 +292,9 @@ class MacroStepEditor(tk.Toplevel):
         name_frame.pack(fill="x", pady=(0, 6))
         ttk.Label(name_frame, text="Name:").pack(side="left")
         self._name_var = tk.StringVar(value=self._macro_name)
-        ttk.Entry(name_frame, textvariable=self._name_var, width=30).pack(
-            side="left", padx=(6, 0), fill="x", expand=True,
-        )
+        self._name_entry = ttk.Entry(name_frame, textvariable=self._name_var, width=30)
+        self._name_entry.pack(side="left", padx=(6, 0), fill="x", expand=True)
+        self._name_var.trace_add("write", self._validate)
 
         # Step list (Treeview)
         list_frame = ttk.Frame(main)
@@ -329,12 +339,14 @@ class MacroStepEditor(tk.Toplevel):
         # OK / Cancel
         btn_frame = ttk.Frame(main)
         btn_frame.pack(pady=(10, 0))
-        ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        ok_btn.pack(side="left", padx=5)
-        ToolTip(ok_btn, text="Save macro")
+        self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
+        self._ok_btn.pack(side="left", padx=5)
+        ToolTip(self._ok_btn, text="Save macro")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
         cancel_btn.pack(side="left", padx=5)
         ToolTip(cancel_btn, text="Discard changes")
+
+        self._validate()
 
     @staticmethod
     def _step_description(step: MacroStep) -> str:
@@ -406,10 +418,14 @@ class MacroStepEditor(tk.Toplevel):
         self._refresh_list()
         self._tree.selection_set(str(idx + 1))
 
+    def _validate(self, *_args):
+        valid = bool(self._name_var.get().strip())
+        self._ok_btn.configure(style="success.Round.TButton" if valid else "secondary.Round.TButton")
+
     def _ok(self):
         name = self._name_var.get().strip()
         if not name:
-            Messagebox.show_warning("Please enter a macro name.", title="Name Required", parent=self)
+            flash_widgets(self, [self._name_entry])
             return
         self.result = Macro(name=name, steps=self._steps)
         self.destroy()
@@ -789,12 +805,15 @@ class BindingEditor(tk.Toplevel):
         self._macro_panel = ttk.LabelFrame(main, text="Macro", padding=(10, 6))
         self._macro_panel.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 6))
 
-        # Step count display
+        # Step count display (tk.Label for flash_widgets background support)
         self._step_count_var = tk.StringVar()
         self._update_step_count_label()
-        ttk.Label(
+        self._step_count_label = tk.Label(
             self._macro_panel, textvariable=self._step_count_var,
-        ).pack(anchor="w", pady=(0, 6))
+            bg=get_frame_bg(),
+            fg=ttk.Style().lookup("TLabel", "foreground") or "#ffffff",
+        )
+        self._step_count_label.pack(anchor="w", pady=(0, 6))
 
         # Macro action buttons
         macro_btn_frame = ttk.Frame(self._macro_panel)
@@ -1240,7 +1259,7 @@ class BindingEditor(tk.Toplevel):
                     ok_enabled = False
 
         self._warning_var.set(warning)
-        self._ok_btn.config(state="normal" if ok_enabled else "disabled")
+        self._ok_btn.configure(style="success.Round.TButton" if ok_enabled else "secondary.Round.TButton")
 
     # ── Results ──────────────────────────────────────────────
 
@@ -1264,11 +1283,27 @@ class BindingEditor(tk.Toplevel):
         trigger = self._hotkey.get()
         action_type = self._action_var.get()
         name = self._name_var.get().strip()
+
+        # Flash empty trigger
+        if not trigger or trigger == "Press a key...":
+            flash_widgets(self, [self._hotkey._entry])
+            return
+
+        # Flash empty target key (Auto Click / Hold with Keyboard Key)
+        if action_type in ("Auto Click", "Hold"):
+            target_sel = self._target_combo_var.get()
+            if target_sel == "Keyboard Key":
+                key_val = self._target_key_capture.get()
+                if not key_val or key_val == "Press a key...":
+                    flash_widgets(self, [self._target_key_capture._entry])
+                    return
+
         interval_ms = 0 if hides_interval(action_type) else self._get_interval_ms()
         action_target = self._get_action_target()
 
         # Block zero interval for click actions
         if not hides_interval(action_type) and interval_ms == 0:
+            flash_widgets(self, [self._interval_spin])
             self._warning_var.set("Interval cannot be zero")
             return
 
@@ -1277,6 +1312,7 @@ class BindingEditor(tk.Toplevel):
         macro_steps: list[MacroStep] = []
         if action_type == "Keyboard Macro":
             if not self._macro_steps:
+                flash_widgets(self, [self._step_count_label])
                 self._warning_var.set("Record or add macro steps first")
                 return
             macro_steps = list(self._macro_steps)
@@ -1386,9 +1422,11 @@ class ProfileSelectorDialog(tk.Toplevel):
             ToolTip(cancel_btn, text="Close dialog")
             return
 
-        # Checkbox frame
-        checkbox_frame = ttk.Frame(main)
-        checkbox_frame.pack(fill="both", expand=True, pady=(0, 10))
+        # Checkbox frame (wrapped in tk.Frame for flash support)
+        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=2, pady=2)
+        self._flash_border.pack(fill="both", expand=True, pady=(0, 10))
+        checkbox_frame = ttk.Frame(self._flash_border)
+        checkbox_frame.pack(fill="both", expand=True)
 
         self._checkbox_vars: dict[str, tk.BooleanVar] = {}
         for profile in self._available_profiles:
@@ -1406,7 +1444,7 @@ class ProfileSelectorDialog(tk.Toplevel):
         btn_frame = ttk.Frame(main)
         btn_frame.pack(pady=(10, 0))
 
-        self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton", state="disabled")
+        self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="secondary.Round.TButton")
         self._ok_btn.pack(side="left", padx=5)
         ToolTip(self._ok_btn, text="Copy to selected profiles")
 
@@ -1415,13 +1453,17 @@ class ProfileSelectorDialog(tk.Toplevel):
         ToolTip(cancel_btn, text="Cancel copy")
 
     def _validate(self):
-        """Enable OK button only when at least one checkbox is selected."""
+        """Switch OK button style based on whether at least one checkbox is selected."""
         any_selected = any(var.get() for var in self._checkbox_vars.values())
-        self._ok_btn.config(state="normal" if any_selected else "disabled")
+        self._ok_btn.configure(style="success.Round.TButton" if any_selected else "secondary.Round.TButton")
 
     def _ok(self):
         """Collect selected profile IDs and close."""
-        self.result = [pid for pid, var in self._checkbox_vars.items() if var.get()]
+        selected = [pid for pid, var in self._checkbox_vars.items() if var.get()]
+        if not selected:
+            flash_widgets(self, [self._flash_border])
+            return
+        self.result = selected
         self.destroy()
 
     def _cancel(self):
