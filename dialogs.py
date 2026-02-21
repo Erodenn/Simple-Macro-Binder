@@ -15,7 +15,7 @@ from actions import (
     ACTION_NAMES, ACTION_DESCRIPTIONS, TARGET_NAMES, TARGET_MOUSE_BUTTONS,
     hides_interval,
 )
-from models import Binding, Macro, MacroStep, Profile
+from models import Binding, BindingManager, Macro, MacroStep, Profile
 from theme import ToolTip, apply_dark_title_bar, flash_widgets, get_frame_bg
 
 
@@ -1472,32 +1472,52 @@ class ProfileSelectorDialog(tk.Toplevel):
 
 
 class BulkCopyDialog(tk.Toplevel):
-    """Modal dialog for selecting a source profile to copy all bindings from."""
+    """Modal dialog for selecting individual bindings from a source profile to copy."""
 
-    def __init__(self, parent, current_profile_id: str, all_profiles: list[Profile]):
+    def __init__(
+        self,
+        parent,
+        current_profile_id: str,
+        all_profiles: list[Profile],
+        dest_bindings: list[Binding],
+        kill_all_hotkey: str = "",
+        on_captures_changed: Callable[[list[HotkeyCapture]], None] | None = None,
+    ):
         super().__init__(parent)
         self.configure(bg=ttk.Style().lookup("TFrame", "background"))
         self.transient(parent)
         self.grab_set()
         self.title("Copy from Profile")
-        self.resizable(False, False)
+        self.resizable(True, True)
+        self.minsize(500, 300)
         self.attributes("-topmost", True)
 
-        self.result: str | None = None  # Selected profile ID
+        self.result: list[tuple[Binding, str | None]] | None = None
 
-        # Find available source profiles (exclude current)
+        self._dest_bindings = dest_bindings
+        self._kill_all_hotkey = kill_all_hotkey
+        self._on_captures_changed = on_captures_changed
         self._available_profiles = [p for p in all_profiles if p.id != current_profile_id]
+        self._rows: list[dict] = []
+        self._hotkey_captures: list[HotkeyCapture] = []
+        self._updating_select_all = False
 
         self._build_ui()
+        self.geometry("600x450")
         self.protocol("WM_DELETE_WINDOW", self._cancel)
         apply_dark_title_bar(self)
         _center_on_parent(self, parent)
+
+    @property
+    def all_hotkey_captures(self) -> list[HotkeyCapture]:
+        return list(self._hotkey_captures)
+
+    # ── UI construction ──────────────────────────────────────
 
     def _build_ui(self):
         main = ttk.Frame(self, padding=16)
         main.pack(fill="both", expand=True)
 
-        # Check if there are any available profiles
         if not self._available_profiles:
             ttk.Label(
                 main, text="No other profiles available.",
@@ -1508,43 +1528,261 @@ class BulkCopyDialog(tk.Toplevel):
             ToolTip(cancel_btn, text="Close dialog")
             return
 
-        # Label
-        ttk.Label(
-            main, text="Select a profile to copy bindings from:",
-        ).pack(anchor="w", pady=(0, 10))
-
-        # Combobox
+        # Profile selector
+        ttk.Label(main, text="Select a profile to copy bindings from:").pack(anchor="w", pady=(0, 6))
         self._profile_var = tk.StringVar()
         self._profile_combo = ttk.Combobox(
-            main,
-            textvariable=self._profile_var,
+            main, textvariable=self._profile_var,
             values=[p.name for p in self._available_profiles],
-            state="readonly",
-            width=30,
+            state="readonly", width=30,
         )
         self._profile_combo.pack(fill="x", pady=(0, 10))
-        if self._available_profiles:
-            self._profile_combo.current(0)
+        self._profile_combo.bind("<<ComboboxSelected>>", self._on_profile_changed)
 
-        # Buttons
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=(0, 6))
+
+        # Select All checkbox
+        self._select_all_var = tk.BooleanVar(value=False)
+        self._select_all_cb = ttk.Checkbutton(
+            main, text="Select All", variable=self._select_all_var,
+            command=self._on_select_all,
+        )
+        self._select_all_cb.pack(anchor="w", pady=(0, 4))
+
+        # Scrollable binding checklist
+        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=2, pady=2)
+        self._flash_border.pack(fill="both", expand=True, pady=(0, 6))
+
+        canvas_frame = ttk.Frame(self._flash_border)
+        canvas_frame.pack(fill="both", expand=True)
+
+        self._canvas = tk.Canvas(
+            canvas_frame, highlightthickness=0, bg=get_frame_bg(),
+            width=560, height=10,
+        )
+        self._scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self._canvas.yview)
+        self._inner = ttk.Frame(self._canvas)
+        self._canvas_window = self._canvas.create_window((0, 0), window=self._inner, anchor="nw")
+        self._inner.bind("<Configure>", self._on_inner_configure)
+        self._canvas.configure(yscrollcommand=self._scrollbar.set)
+        self._canvas.bind("<MouseWheel>", self._on_mousewheel)
+        self._canvas.pack(side="left", fill="both", expand=True)
+
+        # Empty state label (shown when profile has no bindings)
+        self._empty_label = ttk.Label(
+            self._flash_border, text="No bindings in selected profile.",
+            foreground="#888888",
+        )
+
+        # OK / Cancel
         btn_frame = ttk.Frame(main)
         btn_frame.pack(pady=(10, 0))
-
-        ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        ok_btn.pack(side="left", padx=5)
-        ToolTip(ok_btn, text="Select this profile")
-
+        self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="secondary.Round.TButton")
+        self._ok_btn.pack(side="left", padx=5)
+        ToolTip(self._ok_btn, text="Copy selected bindings")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
         cancel_btn.pack(side="left", padx=5)
         ToolTip(cancel_btn, text="Cancel copy")
 
+        # Auto-select first profile and populate checklist
+        if self._available_profiles:
+            self._profile_combo.current(0)
+            self._on_profile_changed()
+
+    # ── Scrollable frame helpers ─────────────────────────────
+
+    def _on_inner_configure(self, _event=None):
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        self._canvas.itemconfigure(self._canvas_window, width=self._inner.winfo_reqwidth())
+        self._update_scroll()
+
+    def _update_scroll(self):
+        max_h = 300
+        req_h = self._inner.winfo_reqheight()
+        h = min(req_h, max_h) if req_h > 0 else 40
+        self._canvas.configure(height=h)
+        if req_h > max_h:
+            self._scrollbar.pack(side="right", fill="y")
+        else:
+            self._scrollbar.pack_forget()
+
+    def _on_mousewheel(self, event):
+        self._canvas.yview_scroll(-1 * (event.delta // 120), "units")
+
+    # ── Profile / row management ─────────────────────────────
+
+    def _on_profile_changed(self, _event=None):
+        # Clear existing rows and captures
+        for row in self._rows:
+            row["frame"].destroy()
+        self._rows.clear()
+        self._hotkey_captures.clear()
+        if self._on_captures_changed:
+            self._on_captures_changed(list(self._hotkey_captures))
+
+        # Find selected profile
+        name = self._profile_var.get()
+        profile = next((p for p in self._available_profiles if p.name == name), None)
+
+        if not profile or not profile.bindings:
+            self._empty_label.pack(pady=10)
+            self._select_all_var.set(False)
+            self._validate()
+            return
+
+        self._empty_label.pack_forget()
+        self._build_binding_rows(profile)
+
+        # Default: select all non-conflicting
+        self._updating_select_all = True
+        enabled_rows = [r for r in self._rows if not r["conflict"]]
+        self._select_all_var.set(bool(enabled_rows))
+        self._updating_select_all = False
+        self._validate()
+
+    def _build_binding_rows(self, profile: Profile):
+        for i, binding in enumerate(profile.bindings):
+            conflict = self._check_trigger_conflict(binding.trigger)
+            row = self._create_row(binding, i, conflict)
+            self._rows.append(row)
+
+    def _check_trigger_conflict(self, trigger: str) -> bool:
+        if BindingManager.check_conflict(trigger, self._dest_bindings):
+            return True
+        if self._kill_all_hotkey and trigger.lower() == self._kill_all_hotkey.lower():
+            return True
+        return False
+
+    def _create_row(self, binding: Binding, index: int, conflict: bool) -> dict:
+        frame = ttk.Frame(self._inner)
+        frame.pack(fill="x", padx=4, pady=2)
+        frame.columnconfigure(2, weight=1)
+
+        var = tk.BooleanVar(value=not conflict)
+        cb = ttk.Checkbutton(frame, variable=var, command=self._on_checkbox_changed)
+        cb.grid(row=0, column=0, padx=(0, 4))
+        if conflict:
+            cb.configure(state="disabled")
+
+        trigger_label = ttk.Label(frame, text=binding.trigger, width=8, anchor="w")
+        trigger_label.grid(row=0, column=1, padx=(0, 6))
+
+        desc = binding.format_action()
+        if binding.name:
+            desc += f'  "{binding.name}"'
+        ttk.Label(frame, text=desc, anchor="w").grid(row=0, column=2, sticky="ew")
+
+        conflict_frame = ttk.Frame(frame)
+        conflict_frame.grid(row=0, column=3, padx=(6, 0))
+
+        row_data: dict = {
+            "binding": binding,
+            "var": var,
+            "frame": frame,
+            "conflict": conflict,
+            "cb": cb,
+            "trigger_label": trigger_label,
+            "conflict_frame": conflict_frame,
+            "capture": None,
+            "new_trigger": None,
+        }
+
+        if conflict:
+            warn_label = ttk.Label(conflict_frame, text="Conflict", foreground="#e74c3c")
+            warn_label.pack(side="left", padx=(0, 4))
+            rebind_btn = ttk.Button(
+                conflict_frame, text="Rebind", width=6,
+                command=lambda idx=index: self._on_rebind(idx),
+                style="primary.Round.TButton",
+            )
+            rebind_btn.pack(side="left")
+            ToolTip(rebind_btn, text="Assign a different trigger key")
+
+        return row_data
+
+    # ── Rebind (inline HotkeyCapture) ────────────────────────
+
+    def _on_rebind(self, index: int):
+        row = self._rows[index]
+        for w in row["conflict_frame"].winfo_children():
+            w.destroy()
+
+        capture = HotkeyCapture(
+            row["conflict_frame"],
+            initial=row["binding"].trigger,
+            on_change=lambda name, idx=index: self._on_rebind_changed(idx, name),
+        )
+        capture.pack(side="left")
+        row["capture"] = capture
+
+        self._hotkey_captures.append(capture)
+        if self._on_captures_changed:
+            self._on_captures_changed(list(self._hotkey_captures))
+
+    def _on_rebind_changed(self, index: int, new_trigger: str):
+        row = self._rows[index]
+
+        # Check against dest bindings and kill-all
+        if self._check_trigger_conflict(new_trigger):
+            flash_widgets(self, [row["capture"]._entry])
+            return
+
+        # Check against other selected/rebound triggers in the checklist
+        for i, other in enumerate(self._rows):
+            if i == index:
+                continue
+            effective = other.get("new_trigger") or other["binding"].trigger
+            if other["var"].get() and effective.lower() == new_trigger.lower():
+                flash_widgets(self, [row["capture"]._entry])
+                return
+
+        # Valid — enable and auto-check the row
+        row["new_trigger"] = new_trigger
+        row["conflict"] = False
+        row["cb"].configure(state="normal")
+        row["var"].set(True)
+        row["trigger_label"].configure(text=new_trigger)
+        self._on_checkbox_changed()
+
+    # ── Select All / validation ──────────────────────────────
+
+    def _on_select_all(self):
+        if self._updating_select_all:
+            return
+        val = self._select_all_var.get()
+        self._updating_select_all = True
+        for row in self._rows:
+            if not row["conflict"]:
+                row["var"].set(val)
+        self._updating_select_all = False
+        self._validate()
+
+    def _on_checkbox_changed(self):
+        if self._updating_select_all:
+            return
+        enabled_rows = [r for r in self._rows if not r["conflict"]]
+        if enabled_rows:
+            all_checked = all(r["var"].get() for r in enabled_rows)
+            self._updating_select_all = True
+            self._select_all_var.set(all_checked)
+            self._updating_select_all = False
+        self._validate()
+
+    def _validate(self):
+        any_selected = any(r["var"].get() for r in self._rows)
+        self._ok_btn.configure(style="success.Round.TButton" if any_selected else "secondary.Round.TButton")
+
+    # ── Results ──────────────────────────────────────────────
+
     def _ok(self):
-        """Find selected profile ID and close."""
-        selected_name = self._profile_var.get()
-        for profile in self._available_profiles:
-            if profile.name == selected_name:
-                self.result = profile.id
-                break
+        selected = [
+            (row["binding"], row.get("new_trigger"))
+            for row in self._rows if row["var"].get()
+        ]
+        if not selected:
+            flash_widgets(self, [self._flash_border])
+            return
+        self.result = selected
         self.destroy()
 
     def _cancel(self):

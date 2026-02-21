@@ -578,37 +578,31 @@ class App:
         self._switch_profile(self._profiles[0])
         self._refresh_profile_combo()
 
-    def _copy_from_profile(self, source_profile_id: str) -> tuple[int, int]:
-        """Copy all bindings from source profile to active profile.
+    def _copy_from_profile(self, selections: list[tuple[Binding, str | None]]) -> int:
+        """Copy selected bindings to the active profile.
 
-        Returns: (copied_count, skipped_count)
+        Args:
+            selections: List of (source_binding, new_trigger_or_None) tuples.
+
+        Returns: Number of bindings copied.
         """
-        # Find source profile
-        source_profile = next((p for p in self._profiles if p.id == source_profile_id), None)
-        if not source_profile or not self._active_profile:
-            return (0, 0)
+        if not self._active_profile:
+            return 0
 
         copied = 0
-        skipped = 0
-
-        for binding in source_profile.bindings:
-            # Check conflict
-            if BindingManager.check_conflict(binding.trigger, self._active_profile.bindings):
-                skipped += 1
-                continue
-
-            # Create deep copy
+        for binding, new_trigger in selections:
             copy_dict = binding.to_dict()
             new_binding = Binding.from_dict(copy_dict)
             new_binding.id = uuid.uuid4().hex[:8]
             new_binding.enabled = False
+            if new_trigger:
+                new_binding.trigger = new_trigger
 
-            # Add to active profile
             self._active_profile.bindings.append(new_binding)
             self._add_binding_row(new_binding)
             copied += 1
 
-        return (copied, skipped)
+        return copied
 
     def _copy_from_profile_ui(self):
         """Handle 'Copy from...' button click."""
@@ -617,34 +611,37 @@ class App:
         if not self._active_profile:
             return
 
-        # Open dialog
-        dialog = BulkCopyDialog(self.root, self._active_profile.id, self._profiles)
+        # Track HotkeyCapture registrations from the dialog
+        dialog_caps: list = []
+
+        def on_caps_changed(new_caps):
+            for c in dialog_caps:
+                if c in self._hotkey_captures:
+                    self._hotkey_captures.remove(c)
+            dialog_caps.clear()
+            for c in new_caps:
+                self._hotkey_captures.append(c)
+            dialog_caps.extend(new_caps)
+
+        dialog = BulkCopyDialog(
+            self.root,
+            self._active_profile.id,
+            self._profiles,
+            dest_bindings=self._active_profile.bindings,
+            kill_all_hotkey=self._kill_all_key,
+            on_captures_changed=on_caps_changed,
+        )
         self.root.wait_window(dialog)
 
+        # Unregister any remaining captures
+        for c in dialog_caps:
+            if c in self._hotkey_captures:
+                self._hotkey_captures.remove(c)
+
         if not dialog.result:
-            return  # Canceled
-
-        # Confirm
-        source_profile = next((p for p in self._profiles if p.id == dialog.result), None)
-        if not source_profile:
             return
 
-        if Messagebox.yesno(
-            f'Copy all bindings from "{source_profile.name}" to "{self._active_profile.name}"?',
-            title="Confirm Bulk Copy",
-            parent=self.root
-        ) != "Yes":
-            return
-
-        # Execute copy
-        copied, skipped = self._copy_from_profile(dialog.result)
-
-        # Show summary
-        msg = f"Copied {copied} binding(s) from '{source_profile.name}'."
-        if skipped > 0:
-            msg += f"\n{skipped} binding(s) skipped due to conflicts."
-
-        Messagebox.show_info(msg, title="Copy Complete", parent=self.root)
+        self._copy_from_profile(dialog.result)
 
     # ── Binding CRUD ─────────────────────────────────────────
 
