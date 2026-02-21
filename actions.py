@@ -339,6 +339,10 @@ class MouseMacroAction(Action):
             ny = int(cy + radius * math.sin(angle))
             self._mouse.position = (nx, ny)
             time.sleep(dt)
+        # Snap to original center to prevent drift when looping
+        # (the next cycle starts at cx + radius via i=0, same as the first cycle)
+        if self._running:
+            self._mouse.position = (cx, cy)
 
     def _run_square(self, ox: int, oy: int, size: int, speed: float):
         half = size // 2
@@ -385,6 +389,9 @@ class MouseMacroAction(Action):
             ny = int(cy + size * math.sin(2 * t) / 2)
             self._mouse.position = (nx, ny)
             time.sleep(dt)
+        # Snap to exact center to prevent drift when looping
+        if self._running:
+            self._mouse.position = (cx, cy)
 
     def _run_spiral(self, cx: int, cy: int, speed: float, dir_sign: float,
                     start_radius: int, end_radius: int, revolutions: int):
