@@ -6,8 +6,10 @@ try:
 except Exception:
     pass
 
+import atexit
 import json
 import os
+import sys
 import tkinter as tk
 import uuid
 from tkinter import ttk
@@ -122,7 +124,10 @@ def _migrate_settings(settings: dict) -> dict:
 # ── App ──────────────────────────────────────────────────────
 
 class App:
-    SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
+    SETTINGS_DIR = os.path.join(
+        os.environ.get("APPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Roaming"),
+        "SimpleMacroBinder",
+    )
     SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
 
     def __init__(self):
@@ -132,6 +137,7 @@ class App:
 
         self._hotkey_captures: list[HotkeyCapture] = []
         self._binding_rows: dict[str, BindingRow] = {}
+        self._closing = False
         self._recording_active = False
 
         # Profiles
@@ -169,7 +175,8 @@ class App:
         apply_dark_title_bar(self.root)
 
         # Window + taskbar icon
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
+        bundle_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        icon_path = os.path.join(bundle_dir, "icon.ico")
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
 
@@ -181,6 +188,7 @@ class App:
         self._build_ui(settings)
         self._load_profiles(settings)
         self._setup_listeners()
+        self._register_atexit()
         self._poll_status()
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -207,9 +215,12 @@ class App:
             "always_on_top": self._always_on_top.get(),
             "strip_mode": self._strip_mode.get(),
         }
-        os.makedirs(self.SETTINGS_DIR, exist_ok=True)
-        with open(self.SETTINGS_FILE, "w") as f:
-            json.dump(data, f, indent=2)
+        try:
+            os.makedirs(self.SETTINGS_DIR, exist_ok=True)
+            with open(self.SETTINGS_FILE, "w") as f:
+                json.dump(data, f, indent=2)
+        except OSError:
+            pass  # Best-effort save; don't block shutdown
 
     def _load_profiles(self, settings: dict):
         """Parse profiles from settings, activate the saved one, build UI rows."""
@@ -802,6 +813,8 @@ class App:
             row.set_active(self.manager.is_active(bid))
 
     def _poll_status(self):
+        if self._closing:
+            return
         self._update_status_dots()
         self.root.after(100, self._poll_status)
 
@@ -864,11 +877,16 @@ class App:
     # ── Cleanup ──────────────────────────────────────────────
 
     def _on_close(self):
+        self._closing = True
         self.manager.stop_all()
         self._save_settings()
         self._kb_listener.stop()
         self._mouse_listener.stop()
         self.root.destroy()
+
+    def _register_atexit(self):
+        """Safety net: release any held keys/buttons on unexpected exit."""
+        atexit.register(self.manager.stop_all)
 
 
 if __name__ == "__main__":

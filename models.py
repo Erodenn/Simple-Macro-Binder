@@ -179,8 +179,8 @@ class Binding:
     def from_dict(cls, data: dict) -> Binding:
         steps = [MacroStep.from_dict(s) for s in data.get("macro_steps", [])]
         return cls(
-            trigger=data["trigger"],
-            action_type=data["action_type"],
+            trigger=data.get("trigger", ""),
+            action_type=data.get("action_type", "Auto Click"),
             interval_ms=data.get("interval_ms", 1000),
             enabled=data.get("enabled", True),
             name=data.get("name", ""),

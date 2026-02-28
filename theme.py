@@ -343,7 +343,9 @@ def flash_widgets(
 
 # ── Icon loading ─────────────────────────────────────────────
 
-ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
+# When frozen, bundled data is in sys._MEIPASS; otherwise next to this file.
+_BUNDLE_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+ICON_DIR = os.path.join(_BUNDLE_DIR, "icons")
 
 _icon_cache: dict[tuple[str, int, tuple | None], ImageTk.PhotoImage] = {}
 

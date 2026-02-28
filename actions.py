@@ -194,6 +194,7 @@ class MouseMacroAction(Action):
 
     def start(self):
         self._running = True
+        self._start_pos = self._mouse.position
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -219,6 +220,8 @@ class MouseMacroAction(Action):
                 self._run_jiggle()
             elif mode == "move_to":
                 self._run_move_to()
+                if self._loop and self._running:
+                    self._mouse.position = self._start_pos
             elif mode == "pattern":
                 self._run_pattern()
             else:
@@ -247,7 +250,7 @@ class MouseMacroAction(Action):
         if smooth:
             duration_s = self._config.get("move_duration_ms", 500) / 1000.0
             easing = self._config.get("move_easing", "linear")
-            sx, sy = self._mouse.position
+            sx, sy = self._start_pos
             steps = max(int(duration_s * 60), 1)
             dt = duration_s / steps
             for i in range(1, steps + 1):

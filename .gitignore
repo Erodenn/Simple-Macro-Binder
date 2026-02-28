@@ -24,5 +24,10 @@ Thumbs.db
 # Windows artifacts
 nul
 
+# PyInstaller
+build/
+dist/
+*.spec
+
 # Temp
 *.tmp.*

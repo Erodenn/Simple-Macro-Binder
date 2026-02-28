@@ -19,24 +19,28 @@ Built with Python, ttkbootstrap, and pynput.
 
 **Toggle-based activation**: press the trigger key once to start an action, press it again to stop. No hold-to-activate.
 
-## Requirements
-
-- Windows (uses Windows DWM API for dark title bar, DPI awareness via `ctypes.windll`)
-- Python 3.10+
-
 ## Install
+
+### Binary (recommended)
+
+Download `Simple.Macro.Binder.exe` from the [latest release](../../releases/latest) and run it. No installation or dependencies required.
+
+Settings are stored in `%APPDATA%\SimpleMacroBinder\settings.json`.
+
+**Note:** Windows Defender or other antivirus software may flag the exe because it uses global keyboard and mouse hooks (via pynput). This is a false positive. You can add an exception for the exe if needed.
+
+### From source
+
+Requires Windows and Python 3.10+.
 
 ```
 pip install -r requirements.txt
+python main.py
 ```
 
 Dependencies: `pynput`, `ttkbootstrap`, `Pillow`
 
 ## Usage
-
-```
-python main.py
-```
 
 1. Create a binding with the **+** button
 2. Set a trigger key (click the capture field and press any key or mouse side button)
@@ -44,7 +48,7 @@ python main.py
 4. Close the editor. The binding is now active.
 5. Press the trigger key to start the action, press it again to stop.
 
-Bindings, profiles, and settings are saved automatically to `settings.json` on exit and loaded on startup.
+Bindings, profiles, and settings are saved automatically on exit and loaded on startup. The default kill-all hotkey is **Escape**, which stops every running action at once.
 
 ## Project Structure
 
