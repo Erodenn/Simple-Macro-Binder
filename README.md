@@ -61,6 +61,10 @@ binding_row.py   Individual binding row UI component
 theme.py         Colors, fonts, spacing, dark title bar, rounded button styles
 ```
 
+## Acknowledgements
+
+Built with [Claude Code](https://github.com/anthropics/claude-code).
+
 ## License
 
 [MIT](LICENSE)
