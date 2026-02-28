@@ -5,7 +5,7 @@ from tkinter import ttk
 from typing import Callable
 
 from models import Binding
-from theme import StatusDot, ToolTip
+from theme import StatusDot, ToolTip, scale
 
 
 class BindingRow(ttk.Frame):
@@ -51,37 +51,37 @@ class BindingRow(ttk.Frame):
         self._checkbox = ttk.Checkbutton(
             self, variable=self._enabled_var, command=self._toggle_enabled
         )
-        self._checkbox.grid(row=0, column=0, padx=(6, 0))
+        self._checkbox.grid(row=0, column=0, padx=(scale(6), 0))
 
         # Status dot
-        self.status_dot.grid(row=0, column=1, padx=(3, 3))
+        self.status_dot.grid(row=0, column=1, padx=(scale(3), scale(3)))
 
         # Name
         self.name_label = ttk.Label(self, text=self.binding.name, width=12, anchor="w")
-        self.name_label.grid(row=0, column=2, padx=5)
+        self.name_label.grid(row=0, column=2, padx=scale(5))
 
         # Trigger
         self.trigger_label = ttk.Label(self, text=self.binding.trigger, width=8, anchor="w")
-        self.trigger_label.grid(row=0, column=3, padx=5)
+        self.trigger_label.grid(row=0, column=3, padx=scale(5))
 
         # Action type
         self.action_label = ttk.Label(
             self, text=self.binding.format_action(), width=20, anchor="w"
         )
-        self.action_label.grid(row=0, column=4, padx=5)
+        self.action_label.grid(row=0, column=4, padx=scale(5))
 
         # Interval
         self.interval_label = ttk.Label(
             self, text=self.binding.format_interval(), width=10, anchor="w"
         )
-        self.interval_label.grid(row=0, column=5, padx=5)
+        self.interval_label.grid(row=0, column=5, padx=scale(5))
 
         # Edit button
         edit_btn_kwargs = {"text": "\u270e", "width": 3}
         if icon_edit:
             edit_btn_kwargs = {"image": icon_edit}
         edit_btn = ttk.Button(self, command=self._edit, bootstyle="info-link", **edit_btn_kwargs)
-        edit_btn.grid(row=0, column=6, padx=3)
+        edit_btn.grid(row=0, column=6, padx=scale(3))
         ToolTip(edit_btn, text="Edit binding")
 
         # Copy button
@@ -89,7 +89,7 @@ class BindingRow(ttk.Frame):
         if icon_copy:
             copy_btn_kwargs = {"image": icon_copy}
         copy_btn = ttk.Button(self, command=self._copy, bootstyle="info-link", **copy_btn_kwargs)
-        copy_btn.grid(row=0, column=7, padx=3)
+        copy_btn.grid(row=0, column=7, padx=scale(3))
         ToolTip(copy_btn, text="Copy to other profiles")
 
         # Remove button
@@ -99,7 +99,7 @@ class BindingRow(ttk.Frame):
         remove_btn = ttk.Button(
             self, command=self._remove, bootstyle="danger-link", **remove_btn_kwargs
         )
-        remove_btn.grid(row=0, column=8, padx=(3, 6))
+        remove_btn.grid(row=0, column=8, padx=(scale(3), scale(6)))
         ToolTip(remove_btn, text="Remove binding")
 
         self._update_appearance()
@@ -110,10 +110,10 @@ class BindingRow(ttk.Frame):
         self._checkbox = ttk.Checkbutton(
             self, variable=self._enabled_var, command=self._toggle_enabled
         )
-        self._checkbox.grid(row=0, column=0, padx=(6, 0), sticky="w")
+        self._checkbox.grid(row=0, column=0, padx=(scale(6), 0), sticky="w")
 
         # Status dot
-        self.status_dot.grid(row=0, column=1, padx=(3, 3))
+        self.status_dot.grid(row=0, column=1, padx=(scale(3), scale(3)))
 
         # Combined "Trigger: Action" label
         trigger_name = self.binding.trigger
@@ -121,7 +121,7 @@ class BindingRow(ttk.Frame):
         combined_text = f"{trigger_name}: {action_desc}"
 
         self.combined_label = ttk.Label(self, text=combined_text, anchor="w")
-        self.combined_label.grid(row=0, column=2, sticky="w", padx=(5, 10))
+        self.combined_label.grid(row=0, column=2, sticky="w", padx=(scale(5), scale(10)))
 
         self._update_appearance()
 

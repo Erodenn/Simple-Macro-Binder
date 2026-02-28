@@ -1,6 +1,28 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
-*.tmp.*
+*.egg-info/
+
+# App data
 settings.json
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Windows artifacts
 nul
+
+# Temp
+*.tmp.*

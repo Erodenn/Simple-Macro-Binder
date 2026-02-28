@@ -25,7 +25,7 @@ from binding_row import create_binding_row
 from theme import (
     Colors, Spacing, Fonts, ToolTip, StatusDot,
     apply_dark_title_bar, configure_styles, get_frame_bg,
-    load_icon, load_tinted_icon,
+    load_icon, load_tinted_icon, scale,
 )
 
 
@@ -157,11 +157,12 @@ class App:
         configure_styles(style)
 
         # Load icons
+        _icon_size = scale(14)
         self._icons = {
-            "plus": load_icon("icon_plus_white.png", 14),
-            "edit": load_icon("icon_Edit_white.png", 14),
-            "close": load_icon("icon_Close_white.png", 14),
-            "close_red": load_tinted_icon("icon_Close_white.png", 14, (231, 76, 60)),
+            "plus": load_icon("icon_plus_white.png", _icon_size),
+            "edit": load_icon("icon_Edit_white.png", _icon_size),
+            "close": load_icon("icon_Close_white.png", _icon_size),
+            "close_red": load_tinted_icon("icon_Close_white.png", _icon_size, (231, 76, 60)),
         }
 
         # Dark title bar via Windows DWM API
@@ -245,7 +246,7 @@ class App:
     # ── UI ───────────────────────────────────────────────────
 
     def _build_ui(self, settings: dict):
-        self.main = ttk.Frame(self.root, padding=(14, 10))
+        self.main = ttk.Frame(self.root, padding=(scale(14), scale(10)))
         self.main.pack(fill="both", expand=True)
 
         # Store initial kill-all key from settings
@@ -260,8 +261,8 @@ class App:
 
     def _build_profile_section(self):
         """Build (or rebuild) the profile selector with current strip mode."""
-        self.profile_lf = ttk.LabelFrame(self.main, text="Profile", padding=(8, 6))
-        self.profile_lf.pack(fill="x", pady=(0, 10))
+        self.profile_lf = ttk.LabelFrame(self.main, text="Profile", padding=(scale(8), scale(6)))
+        self.profile_lf.pack(fill="x", pady=(0, scale(10)))
 
         profile_row = ttk.Frame(self.profile_lf)
         profile_row.pack(fill="x")
@@ -274,7 +275,7 @@ class App:
             width=20,
         )
         self._profile_combo.bind("<<ComboboxSelected>>", self._on_profile_selected)
-        self._profile_combo.pack(side="left", padx=(0, 6))
+        self._profile_combo.pack(side="left", padx=(0, scale(6)))
 
         # Only show edit buttons in normal mode
         if not self._strip_mode.get():
@@ -282,34 +283,34 @@ class App:
                 profile_row, image=self._icons["plus"], width=3,
                 command=self._new_profile, style="success.Round.TButton",
             )
-            new_prof_btn.pack(side="left", padx=3)
+            new_prof_btn.pack(side="left", padx=scale(3))
             ToolTip(new_prof_btn, text="New profile")
 
             rename_prof_btn = ttk.Button(
                 profile_row, image=self._icons["edit"], width=3,
                 command=self._rename_profile, style="info.Round.TButton",
             )
-            rename_prof_btn.pack(side="left", padx=3)
+            rename_prof_btn.pack(side="left", padx=scale(3))
             ToolTip(rename_prof_btn, text="Rename profile")
 
             del_prof_btn = ttk.Button(
                 profile_row, image=self._icons["close"], width=3,
                 command=self._delete_profile, style="danger.Round.TButton",
             )
-            del_prof_btn.pack(side="left", padx=3)
+            del_prof_btn.pack(side="left", padx=scale(3))
             ToolTip(del_prof_btn, text="Delete profile")
 
             copy_from_btn = ttk.Button(
                 profile_row, image=self._icons["edit"], width=3,
                 command=self._copy_from_profile_ui, style="secondary.Round.TButton",
             )
-            copy_from_btn.pack(side="left", padx=3)
+            copy_from_btn.pack(side="left", padx=scale(3))
             ToolTip(copy_from_btn, text="Copy from another profile")
 
     def _build_action_bar(self):
         """Build (or rebuild) the action bar."""
         self.action_bar = ttk.Frame(self.main)
-        self.action_bar.pack(fill="x", pady=(0, 10))
+        self.action_bar.pack(fill="x", pady=(0, scale(10)))
 
         add_btn = ttk.Button(
             self.action_bar, text=" Add Binding", image=self._icons["plus"],
@@ -336,12 +337,12 @@ class App:
             # Strip mode: vertical layout, smaller font, no editing controls
             # Kill All - just show current key as label
             kill_row = ttk.Frame(self.bottom_bar)
-            kill_row.pack(fill="x", pady=(0, 2))
+            kill_row.pack(fill="x", pady=(0, scale(2)))
             ttk.Label(kill_row, text="Kill All:", font=small_font).pack(side="left")
             ttk.Label(
                 kill_row, text=self._kill_all_key, font=small_font,
                 foreground="#888888"
-            ).pack(side="left", padx=(6, 0))
+            ).pack(side="left", padx=(scale(6), 0))
 
             # Strip Mode checkbox
             ttk.Checkbutton(
@@ -350,7 +351,7 @@ class App:
                 variable=self._strip_mode,
                 command=self._toggle_strip_mode,
                 style="small.TCheckbutton",
-            ).pack(anchor="w", pady=(0, 2))
+            ).pack(anchor="w", pady=(0, scale(2)))
 
             # Always on Top checkbox
             ttk.Checkbutton(
@@ -374,7 +375,7 @@ class App:
             self._kill_all_capture = HotkeyCapture(
                 self.bottom_bar, initial=self._kill_all_key
             )
-            self._kill_all_capture.pack(side="left", padx=(6, 14))
+            self._kill_all_capture.pack(side="left", padx=(scale(6), scale(14)))
             self._hotkey_captures.append(self._kill_all_capture)
 
             # Strip Mode checkbox
@@ -384,7 +385,7 @@ class App:
                 variable=self._strip_mode,
                 command=self._toggle_strip_mode,
                 style="small.TCheckbutton",
-            ).pack(side="left", padx=(0, 10))
+            ).pack(side="left", padx=(0, scale(10)))
 
             # Always on Top checkbox
             ttk.Checkbutton(
@@ -397,14 +398,14 @@ class App:
 
     def _build_bindings_section(self):
         """Build (or rebuild) the bindings LabelFrame with current strip mode."""
-        self.bindings_lf = ttk.LabelFrame(self.main, text="Bindings", padding=(8, 6))
-        self.bindings_lf.pack(fill="both", expand=True, pady=(0, 10))
+        self.bindings_lf = ttk.LabelFrame(self.main, text="Bindings", padding=(scale(8), scale(6)))
+        self.bindings_lf.pack(fill="both", expand=True, pady=(0, scale(10)))
 
         # Build header (conditional on strip mode)
         self._build_bindings_header()
 
         # Separator
-        ttk.Separator(self.bindings_lf, orient="horizontal").pack(fill="x", pady=3)
+        ttk.Separator(self.bindings_lf, orient="horizontal").pack(fill="x", pady=scale(3))
 
         # Scrollable binding rows container
         self._rows_frame = ttk.Frame(self.bindings_lf)
@@ -419,30 +420,30 @@ class App:
         if self._strip_mode.get():
             # Strip mode: minimal header
             ttk.Label(header, text="On", width=3, anchor="w", font=hdr_font).grid(
-                row=0, column=0, padx=(6, 0)
+                row=0, column=0, padx=(scale(6), 0)
             )
-            ttk.Label(header, text="", width=2).grid(row=0, column=1, padx=(2, 2))
+            ttk.Label(header, text="", width=2).grid(row=0, column=1, padx=(scale(2), scale(2)))
             ttk.Label(header, text="Binding", anchor="w", font=hdr_font).grid(
-                row=0, column=2, sticky="w", padx=5
+                row=0, column=2, sticky="w", padx=scale(5)
             )
         else:
             # Normal mode: full header
             header.columnconfigure(5, weight=1)
             ttk.Label(header, text="On", width=3, anchor="w", font=hdr_font).grid(
-                row=0, column=0, padx=(6, 0)
+                row=0, column=0, padx=(scale(6), 0)
             )
-            ttk.Label(header, text="", width=2).grid(row=0, column=1, padx=(2, 2))
+            ttk.Label(header, text="", width=2).grid(row=0, column=1, padx=(scale(2), scale(2)))
             ttk.Label(header, text="Name", width=12, anchor="w", font=hdr_font).grid(
-                row=0, column=2, padx=5
+                row=0, column=2, padx=scale(5)
             )
             ttk.Label(header, text="Trigger", width=8, anchor="w", font=hdr_font).grid(
-                row=0, column=3, padx=5
+                row=0, column=3, padx=scale(5)
             )
             ttk.Label(header, text="Action", width=20, anchor="w", font=hdr_font).grid(
-                row=0, column=4, padx=5
+                row=0, column=4, padx=scale(5)
             )
             ttk.Label(header, text="Interval", width=10, anchor="w", font=hdr_font).grid(
-                row=0, column=5, padx=5
+                row=0, column=5, padx=scale(5)
             )
 
     def _add_binding_row(self, binding: Binding):
@@ -457,7 +458,7 @@ class App:
             icon_edit=self._icons["edit"],
             icon_close_red=self._icons["close_red"],
         )
-        row.pack(fill="x", pady=2)
+        row.pack(fill="x", pady=scale(2))
         self._binding_rows[binding.id] = row
 
     def _refresh_row(self, binding: Binding):

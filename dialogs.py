@@ -16,7 +16,7 @@ from actions import (
     hides_interval,
 )
 from models import Binding, BindingManager, Macro, MacroStep, Profile
-from theme import ToolTip, apply_dark_title_bar, flash_widgets, get_frame_bg
+from theme import ToolTip, apply_dark_title_bar, flash_widgets, get_frame_bg, scale, Fonts
 
 
 def _center_on_parent(window, parent) -> None:
@@ -54,7 +54,7 @@ class HotkeyCapture(ttk.Frame):
         self._entry.pack(side="left")
 
         self._btn = ttk.Button(self, text="Set", width=4, command=self._start_listening, style="primary.Round.TButton")
-        self._btn.pack(side="left", padx=(4, 0))
+        self._btn.pack(side="left", padx=(scale(4), 0))
         ToolTip(self._btn, text="Click to capture a key")
 
         # Keyboard capture while listening
@@ -145,71 +145,71 @@ class StepEditorDialog(tk.Toplevel):
         _center_on_parent(self, parent)
 
     def _build_ui(self, step: MacroStep | None):
-        main = ttk.Frame(self, padding=16)
+        main = ttk.Frame(self, padding=scale(16))
         main.pack(fill="both", expand=True)
 
         # Step type selector
-        ttk.Label(main, text="Type:").grid(row=0, column=0, sticky="w", pady=6)
+        ttk.Label(main, text="Type:").grid(row=0, column=0, sticky="w", pady=scale(6))
         self._type_var = tk.StringVar(
             value=step.step_type if step else self.STEP_TYPES[0]
         )
         ttk.Combobox(
             main, textvariable=self._type_var,
             values=self.STEP_TYPES, state="readonly", width=14,
-        ).grid(row=0, column=1, sticky="ew", pady=6)
+        ).grid(row=0, column=1, sticky="ew", pady=scale(6))
         self._type_var.trace_add("write", self._on_type_changed)
 
         # Key field (for key_press / key_release)
         self._key_frame = ttk.Frame(main)
-        self._key_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=6)
+        self._key_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=scale(6))
         ttk.Label(self._key_frame, text="Key:").pack(side="left")
         self._key_var = tk.StringVar(value=step.key if step and step.key else "")
         self._key_entry = ttk.Entry(self._key_frame, textvariable=self._key_var, width=15)
-        self._key_entry.pack(side="left", padx=(6, 0))
+        self._key_entry.pack(side="left", padx=(scale(6), 0))
         self._key_var.trace_add("write", self._validate)
 
         # Mouse fields (for mouse_click)
         self._mouse_frame = ttk.Frame(main)
-        self._mouse_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=6)
+        self._mouse_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=scale(6))
         ttk.Label(self._mouse_frame, text="X:").pack(side="left")
         self._x_var = tk.IntVar(value=step.x if step and step.x is not None else 0)
         ttk.Spinbox(
             self._mouse_frame, from_=0, to=99999, textvariable=self._x_var, width=6,
-        ).pack(side="left", padx=(3, 10))
+        ).pack(side="left", padx=(scale(3), scale(10)))
         ttk.Label(self._mouse_frame, text="Y:").pack(side="left")
         self._y_var = tk.IntVar(value=step.y if step and step.y is not None else 0)
         ttk.Spinbox(
             self._mouse_frame, from_=0, to=99999, textvariable=self._y_var, width=6,
-        ).pack(side="left", padx=(3, 10))
+        ).pack(side="left", padx=(scale(3), scale(10)))
         ttk.Label(self._mouse_frame, text="Button:").pack(side="left")
         self._btn_var = tk.StringVar(value=step.button if step else "left")
         ttk.Combobox(
             self._mouse_frame, textvariable=self._btn_var,
             values=["left", "right"], state="readonly", width=6,
-        ).pack(side="left", padx=(3, 10))
+        ).pack(side="left", padx=(scale(3), scale(10)))
         ttk.Label(self._mouse_frame, text="Clicks:").pack(side="left")
         self._clicks_var = tk.IntVar(value=step.click_count if step else 1)
         ttk.Spinbox(
             self._mouse_frame, from_=1, to=5, textvariable=self._clicks_var, width=3,
-        ).pack(side="left", padx=3)
+        ).pack(side="left", padx=scale(3))
 
         # Delay field
         self._delay_frame = ttk.Frame(main)
-        self._delay_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=6)
+        self._delay_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=scale(6))
         ttk.Label(self._delay_frame, text="Delay (ms):").pack(side="left")
         self._delay_var = tk.IntVar(value=step.delay_ms if step else 100)
         ttk.Spinbox(
             self._delay_frame, from_=0, to=999999, textvariable=self._delay_var, width=8,
-        ).pack(side="left", padx=6)
+        ).pack(side="left", padx=scale(6))
 
         # OK / Cancel
         btn_frame = ttk.Frame(main)
-        btn_frame.grid(row=4, column=0, columnspan=2, pady=(14, 0))
+        btn_frame.grid(row=4, column=0, columnspan=2, pady=(scale(14), 0))
         self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        self._ok_btn.pack(side="left", padx=5)
+        self._ok_btn.pack(side="left", padx=scale(5))
         ToolTip(self._ok_btn, text="Save step")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Discard changes")
 
         self._on_type_changed()
@@ -271,7 +271,7 @@ class MacroStepEditor(tk.Toplevel):
         self.title("Edit Macro Steps" if macro else "Create Macro")
         self.resizable(True, True)
         self.attributes("-topmost", True)
-        self.geometry("520x420")
+        self.geometry(f"{scale(520)}x{scale(420)}")
 
         self.result: Macro | None = None
         self._macro_name = macro.name if macro else ""
@@ -284,21 +284,21 @@ class MacroStepEditor(tk.Toplevel):
         _center_on_parent(self, parent)
 
     def _build_ui(self):
-        main = ttk.Frame(self, padding=12)
+        main = ttk.Frame(self, padding=scale(12))
         main.pack(fill="both", expand=True)
 
         # Name field
         name_frame = ttk.Frame(main)
-        name_frame.pack(fill="x", pady=(0, 6))
+        name_frame.pack(fill="x", pady=(0, scale(6)))
         ttk.Label(name_frame, text="Name:").pack(side="left")
         self._name_var = tk.StringVar(value=self._macro_name)
         self._name_entry = ttk.Entry(name_frame, textvariable=self._name_var, width=30)
-        self._name_entry.pack(side="left", padx=(6, 0), fill="x", expand=True)
+        self._name_entry.pack(side="left", padx=(scale(6), 0), fill="x", expand=True)
         self._name_var.trace_add("write", self._validate)
 
         # Step list (Treeview)
         list_frame = ttk.Frame(main)
-        list_frame.pack(fill="both", expand=True, pady=6)
+        list_frame.pack(fill="both", expand=True, pady=scale(6))
 
         columns = ("index", "type", "details")
         self._tree = ttk.Treeview(
@@ -308,9 +308,9 @@ class MacroStepEditor(tk.Toplevel):
         self._tree.heading("index", text="#")
         self._tree.heading("type", text="Type")
         self._tree.heading("details", text="Details")
-        self._tree.column("index", width=30, stretch=False)
-        self._tree.column("type", width=90, stretch=False)
-        self._tree.column("details", width=340, stretch=True)
+        self._tree.column("index", width=scale(30), stretch=False)
+        self._tree.column("type", width=scale(90), stretch=False)
+        self._tree.column("details", width=scale(340), stretch=True)
 
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self._tree.yview)
         self._tree.configure(yscrollcommand=scrollbar.set)
@@ -319,31 +319,31 @@ class MacroStepEditor(tk.Toplevel):
 
         # Step action buttons
         step_btn_frame = ttk.Frame(main)
-        step_btn_frame.pack(fill="x", pady=6)
+        step_btn_frame.pack(fill="x", pady=scale(6))
         add_step_btn = ttk.Button(step_btn_frame, text="Add Step", command=self._add_step, style="primary.Round.TButton")
-        add_step_btn.pack(side="left", padx=3)
+        add_step_btn.pack(side="left", padx=scale(3))
         ToolTip(add_step_btn, text="Add a new step")
         edit_step_btn = ttk.Button(step_btn_frame, text="Edit", command=self._edit_step, style="info.Round.TButton")
-        edit_step_btn.pack(side="left", padx=3)
+        edit_step_btn.pack(side="left", padx=scale(3))
         ToolTip(edit_step_btn, text="Edit selected step")
         remove_step_btn = ttk.Button(step_btn_frame, text="Remove", command=self._remove_step, style="danger.Round.TButton")
-        remove_step_btn.pack(side="left", padx=3)
+        remove_step_btn.pack(side="left", padx=scale(3))
         ToolTip(remove_step_btn, text="Remove selected step")
         up_btn = ttk.Button(step_btn_frame, text="\u25b2 Up", command=self._move_up, style="secondary.Round.TButton")
-        up_btn.pack(side="left", padx=3)
+        up_btn.pack(side="left", padx=scale(3))
         ToolTip(up_btn, text="Move step up")
         down_btn = ttk.Button(step_btn_frame, text="\u25bc Down", command=self._move_down, style="secondary.Round.TButton")
-        down_btn.pack(side="left", padx=3)
+        down_btn.pack(side="left", padx=scale(3))
         ToolTip(down_btn, text="Move step down")
 
         # OK / Cancel
         btn_frame = ttk.Frame(main)
-        btn_frame.pack(pady=(10, 0))
+        btn_frame.pack(pady=(scale(10), 0))
         self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        self._ok_btn.pack(side="left", padx=5)
+        self._ok_btn.pack(side="left", padx=scale(5))
         ToolTip(self._ok_btn, text="Save macro")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Discard changes")
 
         self._validate()
@@ -468,28 +468,28 @@ class MacroRecorder(tk.Toplevel):
         _center_on_parent(self, parent)
 
     def _build_ui(self):
-        main = ttk.Frame(self, padding=16)
+        main = ttk.Frame(self, padding=scale(16))
         main.pack(fill="both", expand=True)
 
         self._status_var = tk.StringVar(value="Click Start, then perform actions.")
-        ttk.Label(main, textvariable=self._status_var).pack(pady=(0, 10))
+        ttk.Label(main, textvariable=self._status_var).pack(pady=(0, scale(10)))
 
         self._count_var = tk.StringVar(value="Steps: 0")
-        ttk.Label(main, textvariable=self._count_var).pack(pady=(0, 10))
+        ttk.Label(main, textvariable=self._count_var).pack(pady=(0, scale(10)))
 
         btn_frame = ttk.Frame(main)
         btn_frame.pack()
 
         self._start_btn = ttk.Button(btn_frame, text="Start", command=self._start, style="success.Round.TButton")
-        self._start_btn.pack(side="left", padx=5)
+        self._start_btn.pack(side="left", padx=scale(5))
         ToolTip(self._start_btn, text="Start recording")
 
         self._stop_btn = ttk.Button(btn_frame, text="Stop", command=self._stop, state="disabled", style="danger.Round.TButton")
-        self._stop_btn.pack(side="left", padx=5)
+        self._stop_btn.pack(side="left", padx=scale(5))
         ToolTip(self._stop_btn, text="Stop recording")
 
         cancel_btn = ttk.Button(btn_frame, text="Cancel", command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Cancel recording")
 
     def _start(self):
@@ -671,7 +671,7 @@ class BindingEditor(tk.Toplevel):
         return self._hotkey_captures
 
     def _build_ui(self, binding: Binding | None):
-        main = ttk.Frame(self, padding=16)
+        main = ttk.Frame(self, padding=scale(16))
         main.pack(fill="both", expand=True)
 
         row = 0
@@ -682,36 +682,36 @@ class BindingEditor(tk.Toplevel):
                 main, text=f"Kill All hotkey: {self._kill_all_hotkey}",
                 foreground="#888888", style="Header.TLabel",
             )
-            kill_lbl.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 6))
+            kill_lbl.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, scale(6)))
             row += 1
 
         # ── Name ──
-        ttk.Label(main, text="Name:").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Label(main, text="Name:").grid(row=row, column=0, sticky="w", pady=scale(6))
         self._name_var = tk.StringVar(value=binding.name if binding else "")
         self._name_entry = ttk.Entry(main, textvariable=self._name_var, width=24)
-        self._name_entry.grid(row=row, column=1, sticky="ew", pady=6)
+        self._name_entry.grid(row=row, column=1, sticky="ew", pady=scale(6))
         self._name_entry.bind("<KeyRelease>", self._on_name_key)
         row += 1
 
         # ── Trigger ──
-        ttk.Label(main, text="Trigger:").grid(row=row, column=0, sticky="w", pady=6)
+        ttk.Label(main, text="Trigger:").grid(row=row, column=0, sticky="w", pady=scale(6))
         self._hotkey = HotkeyCapture(
             main,
             initial=binding.trigger if binding else "",
             on_change=self._on_trigger_changed,
         )
-        self._hotkey.grid(row=row, column=1, sticky="ew", pady=6)
+        self._hotkey.grid(row=row, column=1, sticky="ew", pady=scale(6))
         self._hotkey_captures.append(self._hotkey)
         row += 1
 
         # ── Action Type (radio buttons) ──
-        action_frame = ttk.LabelFrame(main, text="Action Type", padding=(12, 8))
-        action_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 6))
+        action_frame = ttk.LabelFrame(main, text="Action Type", padding=(scale(12), scale(8)))
+        action_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(scale(10), scale(6)))
 
         self._action_var = tk.StringVar(value=binding.action_type if binding else ACTION_NAMES[0])
         for name in ACTION_NAMES:
             radio_row = ttk.Frame(action_frame)
-            radio_row.pack(fill="x", pady=2)
+            radio_row.pack(fill="x", pady=scale(2))
             ttk.Radiobutton(
                 radio_row, text=name, variable=self._action_var, value=name,
                 command=self._on_action_changed,
@@ -719,13 +719,13 @@ class BindingEditor(tk.Toplevel):
             ttk.Label(
                 radio_row, text=f"\u2014 {ACTION_DESCRIPTIONS[name]}",
                 foreground="#888888",
-            ).pack(side="left", padx=(4, 0))
+            ).pack(side="left", padx=(scale(4), 0))
         row += 1
 
         # ── Target ──
         self._target_row = row
         self._target_frame = ttk.Frame(main)
-        self._target_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=6)
+        self._target_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=scale(6))
 
         ttk.Label(self._target_frame, text="Target:").pack(side="left")
 
@@ -747,7 +747,7 @@ class BindingEditor(tk.Toplevel):
             state="readonly",
             width=14,
         )
-        self._target_combo.pack(side="left", padx=(6, 6))
+        self._target_combo.pack(side="left", padx=(scale(6), scale(6)))
         self._target_combo_var.trace_add("write", self._on_target_changed)
 
         # Keyboard key capture (shown only when "Keyboard Key" selected)
@@ -756,19 +756,19 @@ class BindingEditor(tk.Toplevel):
             initial=initial_key_capture,
             on_change=self._on_target_key_captured,
         )
-        self._target_key_capture.pack(side="left", padx=(0, 4))
+        self._target_key_capture.pack(side="left", padx=(0, scale(4)))
         self._hotkey_captures.append(self._target_key_capture)
         row += 1
 
         # ── Interval ──
-        self._interval_frame = ttk.LabelFrame(main, text="Interval", padding=(10, 6))
-        self._interval_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 6))
+        self._interval_frame = ttk.LabelFrame(main, text="Interval", padding=(scale(10), scale(6)))
+        self._interval_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(scale(10), scale(6)))
 
         interval_ms = binding.interval_ms if binding else 100
 
         # Single ms spinbox + label
         spin_row = ttk.Frame(self._interval_frame)
-        spin_row.pack(fill="x", pady=(0, 6))
+        spin_row.pack(fill="x", pady=(0, scale(6)))
 
         self._interval_var = tk.IntVar(value=interval_ms)
         self._interval_spin = ttk.Spinbox(
@@ -776,7 +776,7 @@ class BindingEditor(tk.Toplevel):
             textvariable=self._interval_var, width=10,
         )
         self._interval_spin.pack(side="left")
-        ttk.Label(spin_row, text="ms").pack(side="left", padx=(6, 10))
+        ttk.Label(spin_row, text="ms").pack(side="left", padx=(scale(6), scale(10)))
 
         self._interval_readable = tk.StringVar()
         ttk.Label(
@@ -796,14 +796,14 @@ class BindingEditor(tk.Toplevel):
                 command=lambda v=ms: self._interval_var.set(v),
                 style="Round.TButton",
             )
-            preset_btn.pack(side="left", padx=3)
+            preset_btn.pack(side="left", padx=scale(3))
             ToolTip(preset_btn, text=f"Set interval to {label}")
 
         row += 1
 
         # ── Macro panel ──
-        self._macro_panel = ttk.LabelFrame(main, text="Macro", padding=(10, 6))
-        self._macro_panel.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 6))
+        self._macro_panel = ttk.LabelFrame(main, text="Macro", padding=(scale(10), scale(6)))
+        self._macro_panel.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(scale(10), scale(6)))
 
         # Step count display (tk.Label for flash_widgets background support)
         self._step_count_var = tk.StringVar()
@@ -813,33 +813,33 @@ class BindingEditor(tk.Toplevel):
             bg=get_frame_bg(),
             fg=ttk.Style().lookup("TLabel", "foreground") or "#ffffff",
         )
-        self._step_count_label.pack(anchor="w", pady=(0, 6))
+        self._step_count_label.pack(anchor="w", pady=(0, scale(6)))
 
         # Macro action buttons
         macro_btn_frame = ttk.Frame(self._macro_panel)
-        macro_btn_frame.pack(fill="x", pady=3)
+        macro_btn_frame.pack(fill="x", pady=scale(3))
         record_btn = ttk.Button(macro_btn_frame, text="Record", command=self._on_record, style="danger.Round.TButton")
-        record_btn.pack(side="left", padx=3)
+        record_btn.pack(side="left", padx=scale(3))
         ToolTip(record_btn, text="Record a new macro")
         edit_steps_btn = ttk.Button(macro_btn_frame, text="Edit Steps", command=self._on_edit_steps, style="info.Round.TButton")
-        edit_steps_btn.pack(side="left", padx=3)
+        edit_steps_btn.pack(side="left", padx=scale(3))
         ToolTip(edit_steps_btn, text="Edit macro steps")
 
         # Loop toggle (for Keyboard Macro)
         self._kb_loop_var = tk.BooleanVar(value=binding.loop if binding else True)
         ttk.Checkbutton(
             self._macro_panel, text="Loop continuously", variable=self._kb_loop_var,
-        ).pack(anchor="w", pady=(6, 0))
+        ).pack(anchor="w", pady=(scale(6), 0))
 
         row += 1
 
         # ── Mouse Macro panel ──
-        self._mm_panel = ttk.LabelFrame(main, text="Mouse Macro", padding=(10, 6))
-        self._mm_panel.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(10, 6))
+        self._mm_panel = ttk.LabelFrame(main, text="Mouse Macro", padding=(scale(10), scale(6)))
+        self._mm_panel.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(scale(10), scale(6)))
 
         # Sub-mode selector
         mode_row = ttk.Frame(self._mm_panel)
-        mode_row.pack(fill="x", pady=(0, 6))
+        mode_row.pack(fill="x", pady=(0, scale(6)))
         ttk.Label(mode_row, text="Mode:").pack(side="left")
 
         _MM_MODE_DISPLAY = ["Jiggle", "Move to Position", "Pattern", "Path (Coming Soon)"]
@@ -853,127 +853,127 @@ class BindingEditor(tk.Toplevel):
         ttk.Combobox(
             mode_row, textvariable=self._mm_mode_var,
             values=_MM_MODE_DISPLAY, state="readonly", width=20,
-        ).pack(side="left", padx=(6, 0))
+        ).pack(side="left", padx=(scale(6), 0))
         self._mm_mode_var.trace_add("write", self._on_mm_mode_changed)
 
         # ── Jiggle sub-frame ──
         self._mm_jiggle_frame = ttk.Frame(self._mm_panel)
-        self._mm_jiggle_frame.pack(fill="x", pady=4)
+        self._mm_jiggle_frame.pack(fill="x", pady=scale(4))
 
         jiggle_r1 = ttk.Frame(self._mm_jiggle_frame)
-        jiggle_r1.pack(fill="x", pady=2)
+        jiggle_r1.pack(fill="x", pady=scale(2))
         ttk.Label(jiggle_r1, text="Radius (px):").pack(side="left")
         self._mm_jiggle_radius_var = tk.IntVar(value=binding.jiggle_radius if binding else 5)
-        ttk.Spinbox(jiggle_r1, from_=1, to=500, textvariable=self._mm_jiggle_radius_var, width=6).pack(side="left", padx=(6, 0))
+        ttk.Spinbox(jiggle_r1, from_=1, to=500, textvariable=self._mm_jiggle_radius_var, width=6).pack(side="left", padx=(scale(6), 0))
 
         jiggle_r2 = ttk.Frame(self._mm_jiggle_frame)
-        jiggle_r2.pack(fill="x", pady=2)
+        jiggle_r2.pack(fill="x", pady=scale(2))
         ttk.Label(jiggle_r2, text="Interval (ms):").pack(side="left")
         self._mm_jiggle_interval_var = tk.IntVar(value=binding.jiggle_interval_ms if binding else 1000)
-        ttk.Spinbox(jiggle_r2, from_=1, to=86400000, textvariable=self._mm_jiggle_interval_var, width=8).pack(side="left", padx=(6, 0))
+        ttk.Spinbox(jiggle_r2, from_=1, to=86400000, textvariable=self._mm_jiggle_interval_var, width=8).pack(side="left", padx=(scale(6), 0))
 
         self._mm_jiggle_readable = tk.StringVar()
-        ttk.Label(jiggle_r2, textvariable=self._mm_jiggle_readable, foreground="#888888").pack(side="left", padx=(6, 0))
+        ttk.Label(jiggle_r2, textvariable=self._mm_jiggle_readable, foreground="#888888").pack(side="left", padx=(scale(6), 0))
         self._mm_jiggle_interval_var.trace_add("write", self._update_jiggle_interval_label)
         self._update_jiggle_interval_label()
 
         # ── Move to Position sub-frame ──
         self._mm_move_frame = ttk.Frame(self._mm_panel)
-        self._mm_move_frame.pack(fill="x", pady=4)
+        self._mm_move_frame.pack(fill="x", pady=scale(4))
 
         coord_row = ttk.Frame(self._mm_move_frame)
-        coord_row.pack(fill="x", pady=2)
+        coord_row.pack(fill="x", pady=scale(2))
         ttk.Label(coord_row, text="X:").pack(side="left")
         self._mm_move_x_var = tk.IntVar(value=binding.move_x if binding else 0)
-        ttk.Spinbox(coord_row, from_=-99999, to=99999, textvariable=self._mm_move_x_var, width=7).pack(side="left", padx=(3, 10))
+        ttk.Spinbox(coord_row, from_=-99999, to=99999, textvariable=self._mm_move_x_var, width=7).pack(side="left", padx=(scale(3), scale(10)))
         ttk.Label(coord_row, text="Y:").pack(side="left")
         self._mm_move_y_var = tk.IntVar(value=binding.move_y if binding else 0)
-        ttk.Spinbox(coord_row, from_=-99999, to=99999, textvariable=self._mm_move_y_var, width=7).pack(side="left", padx=(3, 10))
+        ttk.Spinbox(coord_row, from_=-99999, to=99999, textvariable=self._mm_move_y_var, width=7).pack(side="left", padx=(scale(3), scale(10)))
 
         pick_btn = ttk.Button(coord_row, text="Pick from Screen", command=self._on_mm_pick_position, style="primary.Round.TButton")
-        pick_btn.pack(side="left", padx=(6, 0))
+        pick_btn.pack(side="left", padx=(scale(6), 0))
         ToolTip(pick_btn, text="Click to capture current mouse position")
 
         smooth_row = ttk.Frame(self._mm_move_frame)
-        smooth_row.pack(fill="x", pady=2)
+        smooth_row.pack(fill="x", pady=scale(2))
         self._mm_smooth_var = tk.BooleanVar(value=binding.move_smooth if binding else False)
         ttk.Checkbutton(smooth_row, text="Smooth movement", variable=self._mm_smooth_var, command=self._on_mm_smooth_changed).pack(side="left")
 
         self._mm_smooth_detail = ttk.Frame(self._mm_move_frame)
-        self._mm_smooth_detail.pack(fill="x", pady=2)
+        self._mm_smooth_detail.pack(fill="x", pady=scale(2))
         ttk.Label(self._mm_smooth_detail, text="Duration (ms):").pack(side="left")
         self._mm_duration_var = tk.IntVar(value=binding.move_duration_ms if binding else 500)
-        ttk.Spinbox(self._mm_smooth_detail, from_=50, to=30000, textvariable=self._mm_duration_var, width=7).pack(side="left", padx=(6, 10))
+        ttk.Spinbox(self._mm_smooth_detail, from_=50, to=30000, textvariable=self._mm_duration_var, width=7).pack(side="left", padx=(scale(6), scale(10)))
         ttk.Label(self._mm_smooth_detail, text="Easing:").pack(side="left")
         _EASING_DISPLAY = ["Linear", "Ease In", "Ease Out", "Ease In-Out"]
         self._EASING_MAP = {"Linear": "linear", "Ease In": "ease_in", "Ease Out": "ease_out", "Ease In-Out": "ease_in_out"}
         self._EASING_REVERSE = {v: k for k, v in self._EASING_MAP.items()}
         initial_easing = self._EASING_REVERSE.get(binding.move_easing if binding else "linear", "Linear")
         self._mm_easing_var = tk.StringVar(value=initial_easing)
-        ttk.Combobox(self._mm_smooth_detail, textvariable=self._mm_easing_var, values=_EASING_DISPLAY, state="readonly", width=12).pack(side="left", padx=(6, 0))
+        ttk.Combobox(self._mm_smooth_detail, textvariable=self._mm_easing_var, values=_EASING_DISPLAY, state="readonly", width=12).pack(side="left", padx=(scale(6), 0))
 
         click_row = ttk.Frame(self._mm_move_frame)
-        click_row.pack(fill="x", pady=2)
+        click_row.pack(fill="x", pady=scale(2))
         self._mm_click_var = tk.BooleanVar(value=binding.move_click if binding else False)
         ttk.Checkbutton(click_row, text="Click on arrival", variable=self._mm_click_var, command=self._on_mm_click_changed).pack(side="left")
 
         self._mm_click_detail = ttk.Frame(self._mm_move_frame)
-        self._mm_click_detail.pack(fill="x", pady=2)
+        self._mm_click_detail.pack(fill="x", pady=scale(2))
         ttk.Label(self._mm_click_detail, text="Button:").pack(side="left")
         self._mm_click_btn_var = tk.StringVar(value=binding.move_click_button if binding else "left")
-        ttk.Combobox(self._mm_click_detail, textvariable=self._mm_click_btn_var, values=["left", "right", "middle"], state="readonly", width=8).pack(side="left", padx=(6, 10))
+        ttk.Combobox(self._mm_click_detail, textvariable=self._mm_click_btn_var, values=["left", "right", "middle"], state="readonly", width=8).pack(side="left", padx=(scale(6), scale(10)))
         ttk.Label(self._mm_click_detail, text="Count:").pack(side="left")
         self._mm_click_count_var = tk.IntVar(value=binding.move_click_count if binding else 1)
-        ttk.Spinbox(self._mm_click_detail, from_=1, to=10, textvariable=self._mm_click_count_var, width=3).pack(side="left", padx=(6, 0))
+        ttk.Spinbox(self._mm_click_detail, from_=1, to=10, textvariable=self._mm_click_count_var, width=3).pack(side="left", padx=(scale(6), 0))
 
         # ── Pattern sub-frame ──
         self._mm_pattern_frame = ttk.Frame(self._mm_panel)
-        self._mm_pattern_frame.pack(fill="x", pady=4)
+        self._mm_pattern_frame.pack(fill="x", pady=scale(4))
 
         pat_r1 = ttk.Frame(self._mm_pattern_frame)
-        pat_r1.pack(fill="x", pady=2)
+        pat_r1.pack(fill="x", pady=scale(2))
         ttk.Label(pat_r1, text="Pattern:").pack(side="left")
         _PATTERN_DISPLAY = ["Circle", "Square", "Triangle", "Zigzag", "Figure-8", "Spiral"]
         self._PATTERN_MAP = {"Circle": "circle", "Square": "square", "Triangle": "triangle", "Zigzag": "zigzag", "Figure-8": "figure8", "Spiral": "spiral"}
         self._PATTERN_REVERSE = {v: k for k, v in self._PATTERN_MAP.items()}
         initial_pattern = self._PATTERN_REVERSE.get(binding.pattern_type if binding else "circle", "Circle")
         self._mm_pattern_var = tk.StringVar(value=initial_pattern)
-        ttk.Combobox(pat_r1, textvariable=self._mm_pattern_var, values=_PATTERN_DISPLAY, state="readonly", width=12).pack(side="left", padx=(6, 0))
+        ttk.Combobox(pat_r1, textvariable=self._mm_pattern_var, values=_PATTERN_DISPLAY, state="readonly", width=12).pack(side="left", padx=(scale(6), 0))
         self._mm_pattern_var.trace_add("write", self._on_mm_pattern_changed)
 
         pat_r2 = ttk.Frame(self._mm_pattern_frame)
-        pat_r2.pack(fill="x", pady=2)
+        pat_r2.pack(fill="x", pady=scale(2))
         ttk.Label(pat_r2, text="Size (px):").pack(side="left")
         self._mm_pattern_size_var = tk.IntVar(value=binding.pattern_size if binding else 50)
-        ttk.Spinbox(pat_r2, from_=1, to=2000, textvariable=self._mm_pattern_size_var, width=6).pack(side="left", padx=(6, 10))
+        ttk.Spinbox(pat_r2, from_=1, to=2000, textvariable=self._mm_pattern_size_var, width=6).pack(side="left", padx=(scale(6), scale(10)))
         ttk.Label(pat_r2, text="Speed:").pack(side="left")
         self._mm_pattern_speed_var = tk.DoubleVar(value=binding.pattern_speed if binding else 1.0)
-        ttk.Spinbox(pat_r2, from_=0.1, to=10.0, increment=0.1, textvariable=self._mm_pattern_speed_var, width=5).pack(side="left", padx=(6, 0))
+        ttk.Spinbox(pat_r2, from_=0.1, to=10.0, increment=0.1, textvariable=self._mm_pattern_speed_var, width=5).pack(side="left", padx=(scale(6), 0))
 
         # Direction radios
         self._mm_dir_frame = ttk.Frame(self._mm_pattern_frame)
-        self._mm_dir_frame.pack(fill="x", pady=2)
+        self._mm_dir_frame.pack(fill="x", pady=scale(2))
         ttk.Label(self._mm_dir_frame, text="Direction:").pack(side="left")
         self._mm_dir_var = tk.StringVar(value=binding.pattern_direction if binding else "cw")
-        ttk.Radiobutton(self._mm_dir_frame, text="CW", variable=self._mm_dir_var, value="cw").pack(side="left", padx=(6, 4))
+        ttk.Radiobutton(self._mm_dir_frame, text="CW", variable=self._mm_dir_var, value="cw").pack(side="left", padx=(scale(6), scale(4)))
         ttk.Radiobutton(self._mm_dir_frame, text="CCW", variable=self._mm_dir_var, value="ccw").pack(side="left")
 
         # Spiral extras
         self._mm_spiral_frame = ttk.Frame(self._mm_pattern_frame)
-        self._mm_spiral_frame.pack(fill="x", pady=2)
+        self._mm_spiral_frame.pack(fill="x", pady=scale(2))
         ttk.Label(self._mm_spiral_frame, text="End radius:").pack(side="left")
         self._mm_spiral_end_var = tk.IntVar(value=binding.spiral_end_radius if binding else 80)
-        ttk.Spinbox(self._mm_spiral_frame, from_=1, to=2000, textvariable=self._mm_spiral_end_var, width=6).pack(side="left", padx=(6, 10))
+        ttk.Spinbox(self._mm_spiral_frame, from_=1, to=2000, textvariable=self._mm_spiral_end_var, width=6).pack(side="left", padx=(scale(6), scale(10)))
         ttk.Label(self._mm_spiral_frame, text="Revolutions:").pack(side="left")
         self._mm_spiral_rev_var = tk.IntVar(value=binding.spiral_revolutions if binding else 3)
-        ttk.Spinbox(self._mm_spiral_frame, from_=1, to=50, textvariable=self._mm_spiral_rev_var, width=4).pack(side="left", padx=(6, 0))
+        ttk.Spinbox(self._mm_spiral_frame, from_=1, to=50, textvariable=self._mm_spiral_rev_var, width=4).pack(side="left", padx=(scale(6), 0))
 
         # ── Path sub-frame (stub) ──
         self._mm_path_frame = ttk.Frame(self._mm_panel)
-        self._mm_path_frame.pack(fill="x", pady=4)
+        self._mm_path_frame.pack(fill="x", pady=scale(4))
         ttk.Label(self._mm_path_frame, text="Path recording coming in a future update", foreground="#888888").pack(anchor="w")
         path_btn = ttk.Button(self._mm_path_frame, text="Record Path", state="disabled", style="secondary.Round.TButton")
-        path_btn.pack(anchor="w", pady=(4, 0))
+        path_btn.pack(anchor="w", pady=(scale(4), 0))
         ToolTip(path_btn, text="Not yet implemented")
 
         # ── Loop checkbox (shared for Mouse Macro: Move to Position + Pattern) ──
@@ -981,25 +981,25 @@ class BindingEditor(tk.Toplevel):
         self._mm_loop_check = ttk.Checkbutton(
             self._mm_panel, text="Loop continuously", variable=self._mm_loop_var,
         )
-        self._mm_loop_check.pack(anchor="w", pady=(6, 0))
+        self._mm_loop_check.pack(anchor="w", pady=(scale(6), 0))
 
         row += 1
 
         # ── Conflict warning ──
         self._warning_var = tk.StringVar()
         self._warning_label = ttk.Label(main, textvariable=self._warning_var, foreground="#e74c3c")
-        self._warning_label.grid(row=row, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        self._warning_label.grid(row=row, column=0, columnspan=2, sticky="w", pady=(scale(6), 0))
         row += 1
 
         # ── Buttons ──
         btn_frame = ttk.Frame(main)
-        btn_frame.grid(row=row, column=0, columnspan=2, pady=(14, 0))
+        btn_frame.grid(row=row, column=0, columnspan=2, pady=(scale(14), 0))
 
         self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="success.Round.TButton")
-        self._ok_btn.pack(side="left", padx=5)
+        self._ok_btn.pack(side="left", padx=scale(5))
         ToolTip(self._ok_btn, text="Save binding")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Discard changes")
 
         # Initial state
@@ -1401,30 +1401,30 @@ class ProfileSelectorDialog(tk.Toplevel):
         _center_on_parent(self, parent)
 
     def _build_ui(self):
-        main = ttk.Frame(self, padding=16)
+        main = ttk.Frame(self, padding=scale(16))
         main.pack(fill="both", expand=True)
 
         # Header showing binding info
         display_name = self._binding.name or self._binding.trigger
         ttk.Label(
             main, text=f"Copy '{display_name}' to:",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(anchor="w", pady=(0, 10))
+            font=(Fonts._detect(), scale(10), "bold"),
+        ).pack(anchor="w", pady=(0, scale(10)))
 
         # Check if there are any available profiles
         if not self._available_profiles:
             ttk.Label(
                 main, text="No other profiles available.",
                 foreground="#888888",
-            ).pack(pady=10)
+            ).pack(pady=scale(10))
             cancel_btn = ttk.Button(main, text="OK", width=8, command=self._cancel, style="secondary.Round.TButton")
-            cancel_btn.pack(pady=(10, 0))
+            cancel_btn.pack(pady=(scale(10), 0))
             ToolTip(cancel_btn, text="Close dialog")
             return
 
         # Checkbox frame (wrapped in tk.Frame for flash support)
-        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=2, pady=2)
-        self._flash_border.pack(fill="both", expand=True, pady=(0, 10))
+        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=scale(2), pady=scale(2))
+        self._flash_border.pack(fill="both", expand=True, pady=(0, scale(10)))
         checkbox_frame = ttk.Frame(self._flash_border)
         checkbox_frame.pack(fill="both", expand=True)
 
@@ -1438,18 +1438,18 @@ class ProfileSelectorDialog(tk.Toplevel):
                 variable=var,
                 command=self._validate,
             )
-            cb.pack(anchor="w", pady=2)
+            cb.pack(anchor="w", pady=scale(2))
 
         # Buttons
         btn_frame = ttk.Frame(main)
-        btn_frame.pack(pady=(10, 0))
+        btn_frame.pack(pady=(scale(10), 0))
 
         self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="secondary.Round.TButton")
-        self._ok_btn.pack(side="left", padx=5)
+        self._ok_btn.pack(side="left", padx=scale(5))
         ToolTip(self._ok_btn, text="Copy to selected profiles")
 
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Cancel copy")
 
     def _validate(self):
@@ -1489,7 +1489,7 @@ class BulkCopyDialog(tk.Toplevel):
         self.grab_set()
         self.title("Copy from Profile")
         self.resizable(True, True)
-        self.minsize(500, 300)
+        self.minsize(scale(500), scale(300))
         self.attributes("-topmost", True)
 
         self.result: list[tuple[Binding, str | None]] | None = None
@@ -1503,7 +1503,7 @@ class BulkCopyDialog(tk.Toplevel):
         self._updating_select_all = False
 
         self._build_ui()
-        self.geometry("600x450")
+        self.geometry(f"{scale(600)}x{scale(450)}")
         self.protocol("WM_DELETE_WINDOW", self._cancel)
         apply_dark_title_bar(self)
         _center_on_parent(self, parent)
@@ -1515,31 +1515,31 @@ class BulkCopyDialog(tk.Toplevel):
     # ── UI construction ──────────────────────────────────────
 
     def _build_ui(self):
-        main = ttk.Frame(self, padding=16)
+        main = ttk.Frame(self, padding=scale(16))
         main.pack(fill="both", expand=True)
 
         if not self._available_profiles:
             ttk.Label(
                 main, text="No other profiles available.",
                 foreground="#888888",
-            ).pack(pady=10)
+            ).pack(pady=scale(10))
             cancel_btn = ttk.Button(main, text="OK", width=8, command=self._cancel, style="secondary.Round.TButton")
-            cancel_btn.pack(pady=(10, 0))
+            cancel_btn.pack(pady=(scale(10), 0))
             ToolTip(cancel_btn, text="Close dialog")
             return
 
         # Profile selector
-        ttk.Label(main, text="Select a profile to copy bindings from:").pack(anchor="w", pady=(0, 6))
+        ttk.Label(main, text="Select a profile to copy bindings from:").pack(anchor="w", pady=(0, scale(6)))
         self._profile_var = tk.StringVar()
         self._profile_combo = ttk.Combobox(
             main, textvariable=self._profile_var,
             values=[p.name for p in self._available_profiles],
             state="readonly", width=30,
         )
-        self._profile_combo.pack(fill="x", pady=(0, 10))
+        self._profile_combo.pack(fill="x", pady=(0, scale(10)))
         self._profile_combo.bind("<<ComboboxSelected>>", self._on_profile_changed)
 
-        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=(0, 6))
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=(0, scale(6)))
 
         # Select All checkbox
         self._select_all_var = tk.BooleanVar(value=False)
@@ -1547,18 +1547,18 @@ class BulkCopyDialog(tk.Toplevel):
             main, text="Select All", variable=self._select_all_var,
             command=self._on_select_all,
         )
-        self._select_all_cb.pack(anchor="w", pady=(0, 4))
+        self._select_all_cb.pack(anchor="w", pady=(0, scale(4)))
 
         # Scrollable binding checklist
-        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=2, pady=2)
-        self._flash_border.pack(fill="both", expand=True, pady=(0, 6))
+        self._flash_border = tk.Frame(main, background=get_frame_bg(), padx=scale(2), pady=scale(2))
+        self._flash_border.pack(fill="both", expand=True, pady=(0, scale(6)))
 
         canvas_frame = ttk.Frame(self._flash_border)
         canvas_frame.pack(fill="both", expand=True)
 
         self._canvas = tk.Canvas(
             canvas_frame, highlightthickness=0, bg=get_frame_bg(),
-            width=560, height=10,
+            width=scale(560), height=10,
         )
         self._scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self._canvas.yview)
         self._inner = ttk.Frame(self._canvas)
@@ -1576,12 +1576,12 @@ class BulkCopyDialog(tk.Toplevel):
 
         # OK / Cancel
         btn_frame = ttk.Frame(main)
-        btn_frame.pack(pady=(10, 0))
+        btn_frame.pack(pady=(scale(10), 0))
         self._ok_btn = ttk.Button(btn_frame, text="OK", width=8, command=self._ok, style="secondary.Round.TButton")
-        self._ok_btn.pack(side="left", padx=5)
+        self._ok_btn.pack(side="left", padx=scale(5))
         ToolTip(self._ok_btn, text="Copy selected bindings")
         cancel_btn = ttk.Button(btn_frame, text="Cancel", width=8, command=self._cancel, style="secondary.Round.TButton")
-        cancel_btn.pack(side="left", padx=5)
+        cancel_btn.pack(side="left", padx=scale(5))
         ToolTip(cancel_btn, text="Cancel copy")
 
         # Auto-select first profile and populate checklist
@@ -1597,9 +1597,9 @@ class BulkCopyDialog(tk.Toplevel):
         self._update_scroll()
 
     def _update_scroll(self):
-        max_h = 300
+        max_h = scale(300)
         req_h = self._inner.winfo_reqheight()
-        h = min(req_h, max_h) if req_h > 0 else 40
+        h = min(req_h, max_h) if req_h > 0 else scale(40)
         self._canvas.configure(height=h)
         if req_h > max_h:
             self._scrollbar.pack(side="right", fill="y")
@@ -1655,17 +1655,17 @@ class BulkCopyDialog(tk.Toplevel):
 
     def _create_row(self, binding: Binding, index: int, conflict: bool) -> dict:
         frame = ttk.Frame(self._inner)
-        frame.pack(fill="x", padx=4, pady=2)
+        frame.pack(fill="x", padx=scale(4), pady=scale(2))
         frame.columnconfigure(2, weight=1)
 
         var = tk.BooleanVar(value=not conflict)
         cb = ttk.Checkbutton(frame, variable=var, command=self._on_checkbox_changed)
-        cb.grid(row=0, column=0, padx=(0, 4))
+        cb.grid(row=0, column=0, padx=(0, scale(4)))
         if conflict:
             cb.configure(state="disabled")
 
         trigger_label = ttk.Label(frame, text=binding.trigger, width=8, anchor="w")
-        trigger_label.grid(row=0, column=1, padx=(0, 6))
+        trigger_label.grid(row=0, column=1, padx=(0, scale(6)))
 
         desc = binding.format_action()
         if binding.name:
@@ -1673,7 +1673,7 @@ class BulkCopyDialog(tk.Toplevel):
         ttk.Label(frame, text=desc, anchor="w").grid(row=0, column=2, sticky="ew")
 
         conflict_frame = ttk.Frame(frame)
-        conflict_frame.grid(row=0, column=3, padx=(6, 0))
+        conflict_frame.grid(row=0, column=3, padx=(scale(6), 0))
 
         row_data: dict = {
             "binding": binding,
@@ -1689,7 +1689,7 @@ class BulkCopyDialog(tk.Toplevel):
 
         if conflict:
             warn_label = ttk.Label(conflict_frame, text="Conflict", foreground="#e74c3c")
-            warn_label.pack(side="left", padx=(0, 4))
+            warn_label.pack(side="left", padx=(0, scale(4)))
             rebind_btn = ttk.Button(
                 conflict_frame, text="Rebind", width=6,
                 command=lambda idx=index: self._on_rebind(idx),

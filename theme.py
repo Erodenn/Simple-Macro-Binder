@@ -1,4 +1,4 @@
-"""Theme, color, and style configuration for SimpleMacroBinder."""
+"""Theme, color, and style configuration for Simple Macro Binder."""
 
 import ctypes
 import os
@@ -12,6 +12,43 @@ from PIL import Image, ImageDraw, ImageTk
 from ttkbootstrap.tooltip import ToolTip as _ToolTipBase
 
 
+# ── DPI scaling ──────────────────────────────────────────────
+
+_DESIGN_DPI: int = 96  # baseline: 100% Windows scale
+
+
+def _detect_dpi() -> int:
+    """Read physical DPI via GDI GetDeviceCaps (LOGPIXELSX=88).
+
+    Must run after SetProcessDpiAwareness(2) is called.
+    Falls back to 96 on non-Windows or on any error.
+    """
+    try:
+        hdc = ctypes.windll.gdi32.CreateDCW("DISPLAY", None, None, None)
+        if not hdc:
+            return _DESIGN_DPI
+        dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)
+        ctypes.windll.gdi32.DeleteDC(hdc)
+        return int(dpi) if dpi > 0 else _DESIGN_DPI
+    except Exception:
+        return _DESIGN_DPI
+
+
+_SYSTEM_DPI: int = _detect_dpi()
+_SCALE_FACTOR: float = _SYSTEM_DPI / _DESIGN_DPI
+
+
+def scale(n: int | float) -> int:
+    """Scale a pixel/pt value by the detected DPI factor.
+
+    Returns 0 if n == 0, otherwise at least 1.
+    At 96 DPI (100% scale) scale(n) == n for all integers.
+    """
+    if n == 0:
+        return 0
+    return max(1, round(n * _SCALE_FACTOR))
+
+
 # ── Color Constants ──────────────────────────────────────────
 
 
@@ -23,9 +60,9 @@ class Colors:
 
 
 class Spacing:
-    PAD_X = 6
-    PAD_Y = 6
-    SECTION_Y = 10
+    PAD_X = scale(6)
+    PAD_Y = scale(6)
+    SECTION_Y = scale(10)
 
 
 class Fonts:
@@ -43,13 +80,16 @@ class Fonts:
                 cls._family = ttkb.Style().lookup(".", "font") or "TkDefaultFont"
         return cls._family
 
+    _MAIN_PT: int = 11
+    _SMALL_PT: int = 9
+
     @classmethod
     def main(cls) -> tuple[str, int]:
-        return (cls._detect(), 11)
+        return (cls._detect(), scale(cls._MAIN_PT))
 
     @classmethod
     def small(cls) -> tuple[str, int]:
-        return (cls._detect(), 9)
+        return (cls._detect(), scale(cls._SMALL_PT))
 
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -127,7 +167,7 @@ StyleBuilderTTK.create_roundoutline_button_style = _noop_builder  # type: ignore
 def configure_styles(style: ttkb.Style):
     """Configure all custom styles: rounded buttons, link buttons, widget overrides."""
     colors = style.colors
-    radius = 8
+    radius = scale(8)
     # Image size for 9-slice; border = radius so corners don't stretch
     w, h = radius * 3, radius * 3
     border = (radius, radius, radius, radius)
@@ -165,7 +205,7 @@ def configure_styles(style: ttkb.Style):
                 ]}),
             ]}),
         ])
-        _configure(style, style_name, foreground=fg, anchor="center", padding=(4, 1), borderwidth=0, font=base_font)
+        _configure(style, style_name, foreground=fg, anchor="center", padding=(scale(4), scale(1)), borderwidth=0, font=base_font)
         _map(style, style_name, foreground=[("disabled", "#888888")])
 
     # Solid button variants
@@ -202,7 +242,7 @@ def configure_styles(style: ttkb.Style):
             ]}),
         ]}),
     ])
-    _configure(style, "Round.TButton", foreground=colors.fg, anchor="center", padding=(4, 1), borderwidth=0, font=base_font)
+    _configure(style, "Round.TButton", foreground=colors.fg, anchor="center", padding=(scale(4), scale(1)), borderwidth=0, font=base_font)
     _map(style, "Round.TButton", foreground=[("disabled", "#555555")])
 
     # Store image refs on the style object to prevent GC
@@ -213,32 +253,32 @@ def configure_styles(style: ttkb.Style):
     FONT_SMALL = Fonts.small()
 
     # Small link-style buttons for row actions (edit/remove)
-    style.configure("info-link.TButton", padding=(2, 0), borderwidth=0)
-    style.configure("danger-link.TButton", padding=(2, 0), borderwidth=0)
+    style.configure("info-link.TButton", padding=(scale(2), 0), borderwidth=0)
+    style.configure("danger-link.TButton", padding=(scale(2), 0), borderwidth=0)
 
     # LabelFrame header font
     style.configure("TLabelframe.Label", font=FONT)
     style.configure("TLabelframe", borderwidth=1)
 
     # Combobox / Spinbox / Entry
-    style.configure("TCombobox", padding=(6, 4))
-    style.configure("TSpinbox", padding=(6, 4))
-    style.configure("TEntry", padding=(6, 4))
+    style.configure("TCombobox", padding=(scale(6), scale(4)))
+    style.configure("TSpinbox", padding=(scale(6), scale(4)))
+    style.configure("TEntry", padding=(scale(6), scale(4)))
 
     # Flash styles for required-field validation
     input_bg = style.lookup("TEntry", "fieldbackground") or "#4a4a4a"
     style._input_bg = input_bg  # used by flash_widgets() to restore
-    _configure(style, "Flash.TEntry", fieldbackground=Colors.INACTIVE, padding=(6, 4))
+    _configure(style, "Flash.TEntry", fieldbackground=Colors.INACTIVE, padding=(scale(6), scale(4)))
     _map(style, "Flash.TEntry", fieldbackground=[
         ("readonly", Colors.INACTIVE), ("disabled", Colors.INACTIVE),
     ])
-    _configure(style, "Flash.TSpinbox", fieldbackground=Colors.INACTIVE, padding=(6, 4))
+    _configure(style, "Flash.TSpinbox", fieldbackground=Colors.INACTIVE, padding=(scale(6), scale(4)))
 
     # Header row style
     style.configure("Header.TLabel", font=FONT_SMALL)
 
     # Compact tooltip style
-    style.configure("tooltip.TLabel", font=FONT_SMALL, padding=2)
+    style.configure("tooltip.TLabel", font=FONT_SMALL, padding=scale(2))
 
     # Small checkbutton style
     style.configure("small.TCheckbutton", font=FONT_SMALL)
@@ -352,8 +392,8 @@ def load_tinted_icon(
 class StatusDot(tk.Canvas):
     """A small canvas-drawn circle used as a status indicator."""
 
-    _SIZE = 12
-    _RADIUS = 4
+    _SIZE = scale(12)
+    _RADIUS = scale(4)
 
     def __init__(self, parent, **kwargs):
         bg = ttk.Style().lookup("TFrame", "background") or "#2b2b2b"
@@ -370,20 +410,20 @@ class StatusDot(tk.Canvas):
     def set_disabled(self):
         """Grey hollow dot."""
         self._blink_on = False
-        self.itemconfig(self._dot, fill="", outline="#555555", width=1.5)
+        self.itemconfig(self._dot, fill="", outline="#555555", width=scale(1.5))
 
     def set_idle(self):
         """Red filled dot."""
         self._blink_on = False
-        self.itemconfig(self._dot, fill="#e74c3c", outline="#e74c3c", width=1)
+        self.itemconfig(self._dot, fill="#e74c3c", outline="#e74c3c", width=scale(1))
 
     def set_active(self):
         """Green blinking dot — toggles filled/hollow each call."""
         self._blink_on = not self._blink_on
         if self._blink_on:
-            self.itemconfig(self._dot, fill="#2ecc71", outline="#2ecc71", width=1)
+            self.itemconfig(self._dot, fill="#2ecc71", outline="#2ecc71", width=scale(1))
         else:
-            self.itemconfig(self._dot, fill="", outline="#2ecc71", width=1.5)
+            self.itemconfig(self._dot, fill="", outline="#2ecc71", width=scale(1.5))
 
 
 # ── Topmost-aware ToolTip ────────────────────────────────────
@@ -392,8 +432,8 @@ class StatusDot(tk.Canvas):
 class ToolTip(_ToolTipBase):
     """ToolTip subclass that renders above always-on-top windows with compact sizing."""
 
-    def __init__(self, widget, text="widget info", padding=2, **kwargs):
-        kwargs.setdefault("wraplength", 200)
+    def __init__(self, widget, text="widget info", padding=scale(2), **kwargs):
+        kwargs.setdefault("wraplength", scale(200))
         super().__init__(widget, text=text, padding=padding, **kwargs)
 
     def show_tip(self, *args):
